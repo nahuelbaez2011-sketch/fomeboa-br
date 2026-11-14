@@ -1,0 +1,1 @@
+Copyright 2024 Foursquare Labs, Inc. Data transformed to the Overture schema. Apache License 2.0. Source notice: https://opensource.foursquare.com/places/NOTICE.txt
