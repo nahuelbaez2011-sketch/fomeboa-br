@@ -105,11 +105,21 @@ def osm_venue(element, zone):
     address = ' '.join(str(t.get(k, '')).strip() for k in ['addr:street', 'addr:housenumber']).strip()
     address = ', '.join(x for x in [address, str(t.get('addr:suburb', '')).strip()] if x)
     ident = str(element['type']) + '/' + str(element['id'])
-    return dict(id=ident, osmType=element['type'], osmId=element['id'], name=name,
+    venue = dict(id=ident, osmType=element['type'], osmId=element['id'], name=name,
                 type=kind, typeLabel=label, emoji=emoji, lat=lat, lon=lon, address=address[:300],
                 cuisine=str(t.get('cuisine', '')).replace(';', ', ')[:150], zones=[zone],
                 source='OpenStreetMap', sourceUrl='https://www.openstreetmap.org/' + ident,
                 status='source-listed', unnamed=not bool(t.get('name') or t.get('name:pt') or t.get('brand')))
+    dietary_option = str(t.get('diet:gluten_free', '')).strip().lower()
+    if dietary_option in ('yes', 'only', 'limited'):
+        venue['glutenFree'] = dict(
+            status='options_reported', value=dietary_option,
+            source='OpenStreetMap (diet:gluten_free)',
+            sourceUrl='https://www.openstreetmap.org/' + ident,
+            documentVerified=False, crossContactControlled=False,
+            warning='Declared options do not establish safety for people with coeliac disease.'
+        )
+    return venue
 
 
 def duplicate_key(row):
