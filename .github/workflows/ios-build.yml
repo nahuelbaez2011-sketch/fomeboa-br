@@ -1,0 +1,97 @@
+name: Compilar FomeBoa SP para iPhone (simulador, sin firma)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ios-build.yml'
+      - 'package.json'
+      - 'capacitor.config.json'
+      - 'scripts/preparar-mobile.mjs'
+      - 'scripts/crear-icono-ios.swift'
+permissions:
+  contents: read
+concurrency:
+  group: fomeboa-ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - name: Obtener proyecto
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar Xcode instalado
+        run: |
+          xcodebuild -version
+          node --version
+          npm --version
+      - name: Instalar dependencias versionadas
+        run: npm install --no-audit --no-fund
+      - name: Preparar web para iPhone
+        run: npm run build:mobile
+      - name: Crear proyecto nativo iOS
+        run: |
+          npx cap add ios
+          npx cap sync ios
+          test -d ios/App/App.xcodeproj
+      - name: Crear icono original FomeBoa
+        run: |
+          ICON_DIR="$(find ios/App -type d -name AppIcon.appiconset | head -n 1)"
+          if [ -z "$ICON_DIR" ]; then
+            echo 'No se encontro el conjunto AppIcon' >&2
+            exit 1
+          fi
+          swift scripts/crear-icono-ios.swift "$ICON_DIR/AppIcon.png"
+          cat > "$ICON_DIR/Contents.json" <<'JSON'
+          {
+            "images": [
+              { "filename": "AppIcon.png", "idiom": "universal", "platform": "ios", "size": "1024x1024" }
+            ],
+            "info": { "author": "xcode", "version": 1 }
+          }
+          JSON
+          sips -g pixelWidth -g pixelHeight "$ICON_DIR/AppIcon.png"
+      - name: Compilar para simulador de iPhone sin firma de Apple
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/FomeBoaBuild" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Empaquetar proyecto para Xcode
+        if: always()
+        run: |
+          if [ -d ios ]; then
+            tar -czf FomeBoa-SP-proyecto-Xcode.tar.gz ios
+          fi
+      - name: Guardar proyecto de Xcode
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FomeBoa-SP-proyecto-iOS-Xcode
+          path: FomeBoa-SP-proyecto-Xcode.tar.gz
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Guardar prueba de simulador (NO sirve para instalar en iPhone real)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FomeBoa-SP-simulador-NO-instalar-en-iPhone
+          path: ${{ runner.temp }}/FomeBoaBuild/Build/Products/Debug-iphonesimulator/App.app
+          if-no-files-found: error
+          retention-days: 14
+      - name: Resultado
+        if: always()
+        run: |
+          echo '### FomeBoa SP para iPhone' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Se generó el proyecto nativo Xcode. El build de simulador, si pasó, no puede instalarse en un iPhone físico.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Para un iPhone real se necesita la firma de Apple mediante Xcode o TestFlight, con credenciales del propietario.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No se activaron compras ni planes pagos.' >> "$GITHUB_STEP_SUMMARY"
