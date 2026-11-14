@@ -76,7 +76,7 @@
     trigger.textContent=user?'Mi perfil':client?'Crear cuenta':'Cuenta · próximamente';
     if(client){gate.hidden=!!user;document.documentElement.classList.toggle('fomeboa-auth-locked',!user);}
     window.FomeBoaI18n?.localizeAuth?.();
-    if(!enabled)notice('El registro real se habilitará cuando conectemos Supabase.');
+    if(!enabled)notice(window.FomeBoaI18n?.t?.('authReady')||'El registro real se habilitará cuando conectemos Supabase.');
   }
   function open(){mode=user?'profile':'signup';notice('');render();dlg.showModal()}
   trigger.onclick=open;
@@ -109,8 +109,8 @@
     const email=byId('fomeboaEmail').value.trim().toLowerCase();
     const password=byId('fomeboaPassword').value;
     const name=byId('fomeboaName').value.trim();
-    if(mode==='signup'&&(name.length<2||name.length>40)){notice('Ingresá un nombre de 2 a 40 caracteres.');return}
-    busy=true;byId('fomeboaAuthSubmit').disabled=true;notice('Procesando...');
+    if(mode==='signup'&&(name.length<2||name.length>40)){notice(window.FomeBoaI18n?.t?.('authMsgName')||'Ingresá un nombre de 2 a 40 caracteres.');return}
+    busy=true;byId('fomeboaAuthSubmit').disabled=true;notice(window.FomeBoaI18n?.t?.('authMsgProcessing')||'Procesando...');
     try{
       const redirect=location.origin+location.pathname;
       let result;
@@ -119,9 +119,9 @@
       else result=await client.auth.signInWithPassword({email,password});
       if(result.error)throw result.error;
       byId('fomeboaPassword').value='';
-      if(mode==='reset'){notice('Si existe una cuenta con ese correo, recibirás un enlace.');return}
-      if(mode==='signup'&&!result.data?.session){mode='login';render();notice('Revisá tu correo y confirmá la cuenta para poder ingresar.');return}
-      if(result.data?.user){await verifyUser(result.data.user.id);if(user){await loadProfile();notice('Sesión iniciada.');dlg.close();}else notice('No se pudo confirmar la sesión. Volvé a ingresar.');}
+      if(mode==='reset'){notice(window.FomeBoaI18n?.t?.('authMsgReset')||'Si existe una cuenta con ese correo, recibirás un enlace.');return}
+      if(mode==='signup'&&!result.data?.session){mode='login';render();notice(window.FomeBoaI18n?.t?.('authMsgConfirm')||'Revisá tu correo y confirmá la cuenta para poder ingresar.');return}
+      if(result.data?.user){await verifyUser(result.data.user.id);if(user){await loadProfile();notice(window.FomeBoaI18n?.t?.('authMsgLogging')||'Sesión iniciada.');dlg.close();}else notice(window.FomeBoaI18n?.t?.('authMsgSession')||'No se pudo confirmar la sesión. Volvé a ingresar.');}
     }catch(error){notice(messageFor(error))}
     finally{busy=false;byId('fomeboaAuthSubmit').disabled=false}
   };
@@ -130,12 +130,12 @@
     try{
       const result=await client.auth.updateUser({password:byId('fomeboaNewPassword').value});
       if(result.error)throw result.error;
-      byId('fomeboaNewPassword').value='';setUser(result.data.user||user);notice('Contraseña actualizada.');
+      byId('fomeboaNewPassword').value='';setUser(result.data.user||user);notice(window.FomeBoaI18n?.t?.('authMsgPassword')||'Contraseña actualizada.');
     }catch(error){notice(messageFor(error))}finally{busy=false}
   };
   byId('fomeboaLogout').onclick=async ()=>{
     if(!client)return;
-    try{const r=await client.auth.signOut();if(r.error)throw r.error;setUser(null);notice('Sesión cerrada.')}
+    try{const r=await client.auth.signOut();if(r.error)throw r.error;setUser(null);notice(window.FomeBoaI18n?.t?.('authMsgSignedOut')||'Sesión cerrada.')}
     catch(error){notice(messageFor(error))}
   };
   async function verifyUser(expectedId){
@@ -147,11 +147,11 @@
       const found=!result.error&&result.data?.user&&(!expectedId||result.data.user.id===expectedId)?result.data.user:null;
       setUser(found||null);
       if(found)await loadProfile();
-      else byId('fomeboaGateStatus').textContent='Ingresá o creá una cuenta para continuar.';
+      else byId('fomeboaGateStatus').textContent=window.FomeBoaI18n?.t?.('authMsgLocked')||'Ingresá o creá una cuenta para continuar.';
     }catch(_){
       if(ticket!==validationToken)return;
       setUser(null);
-      byId('fomeboaGateStatus').textContent='No se pudo verificar la sesión. Probá nuevamente.';
+      byId('fomeboaGateStatus').textContent=window.FomeBoaI18n?.t?.('authMsgFail')||'No se pudo verificar la sesión. Probá nuevamente.';
     }
   }
   if(client)client.auth.onAuthStateChange((event,session)=>{
@@ -162,7 +162,7 @@
       return;
     }
     if(event==='PASSWORD_RECOVERY'){
-      queueMicrotask(async()=>{await verifyUser(session?.user?.id);if(user){mode='change';render();dlg.showModal();notice('Ingresá una contraseña nueva.');}});
+      queueMicrotask(async()=>{await verifyUser(session?.user?.id);if(user){mode='change';render();dlg.showModal();notice(window.FomeBoaI18n?.t?.('authMsgPasswordNew')||'Ingresá una contraseña nueva.');}});
       return;
     }
     if(['INITIAL_SESSION','SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(event)){
