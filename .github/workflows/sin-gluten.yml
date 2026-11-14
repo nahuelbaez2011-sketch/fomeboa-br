@@ -1,0 +1,55 @@
+name: Revisar opciones sin gluten en locales
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sin-gluten.yml'
+      - 'scripts/enriquecer_sin_gluten.py'
+permissions:
+  contents: write
+concurrency:
+  group: fomeboa-gluten-enrichment
+  cancel-in-progress: false
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout source data
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+      - name: Check Python code and enrich evidence in all districts
+        run: |
+          python3 -m py_compile scripts/enriquecer_sin_gluten.py
+          python3 scripts/enriquecer_sin_gluten.py
+      - name: Validate report and full catalog
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('catalogo')
+          a=json.loads((root/'gluten-auditoria.json').read_text())
+          m=json.loads((root/'manifest.json').read_text())
+          rows=json.loads((root/'todos.json').read_text())
+          assert len(rows)==m['total']==a['catalogTotal']
+          assert sum(v.get('glutenFree',{}).get('status')=='options_reported' for v in rows)==a['totalWithSourcedOffer']
+          assert not any(v.get('glutenFree',{}).get('status')=='verified_for_coeliacs' and not v['glutenFree'].get('documentVerified') for v in rows)
+          print('PASS',m['total'],'venues;',a['totalWithSourcedOffer'],'reported gluten-free offers')
+          PY
+      - name: Commit sourced dietary availability
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add catalogo/zonas catalogo/todos.json catalogo/manifest.json catalogo/gluten-auditoria.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Mark source-reported gluten-free offers without claiming coeliac certification'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Trigger GitHub Pages publication
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST repos/${{ github.repository }}/pages/builds
