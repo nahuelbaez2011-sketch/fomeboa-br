@@ -99,9 +99,9 @@
   }
   function messageFor(error){
     const s=String(error?.message||'Error de conexión');
-    if(/Invalid login credentials/i.test(s))return 'Correo o contraseña incorrectos.';
-    if(/Email not confirmed/i.test(s))return 'Confirmá tu correo antes de ingresar.';
-    if(/rate limit/i.test(s))return 'Demasiados intentos. Intentá más adelante.';
+    if(/Invalid login credentials/i.test(s))return window.FomeBoaI18n?.t?.('authErrorInvalid')||'Correo o contraseña incorrectos.';
+    if(/Email not confirmed/i.test(s))return window.FomeBoaI18n?.t?.('authErrorEmail')||'Confirmá tu correo antes de ingresar.';
+    if(/rate limit/i.test(s))return window.FomeBoaI18n?.t?.('authErrorRate')||'Demasiados intentos. Intentá más adelante.';
     return s.slice(0,200);
   }
   byId('fomeboaAuthForm').onsubmit=async event=>{
