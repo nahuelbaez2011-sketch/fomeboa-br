@@ -13,6 +13,7 @@ function cats(type,singular=false){return L((singular?'sing_':'kind_')+type)}
 function translate(){
 document.documentElement.lang=lang==='pt'?'pt-BR':lang;
 if(id('fomeboaLanguage'))id('fomeboaLanguage').value=lang;
+if(id('fomeboaGateLanguage'))id('fomeboaGateLanguage').value=lang;
 const staticLabels=[
 ['.explore-heading h2','explore'],['.map-panel>.muted','intro'],['header .nav a[href="#explorar"]','navMap'],['header .nav a[href="#restaurantes"]','navRestaurants'],['header .nav a[href="#promociones"]','navOffers'],['header .nav a[href="#anunciar"]','navAdvertise'],
 ['.browse-zones>summary','browse'],['[data-mapstyle="street"]','map'],['[data-mapstyle="satellite"]','sat'],
@@ -112,7 +113,7 @@ put(id('fomeboaGateTitle'),L('gateTitle'));put(id('fomeboaGateText'),L('gateIntr
 put(id('fomeboaGateSignup'),L('gateSignup'));put(id('fomeboaGateLogin'),L('gateLogin'));put(id('fomeboaGateHelp'),L('gateHelp'));
 if(id('fomeboaGateStatus')&&/Verificando tu sesión|Verificando sua sessão|Checking your session/.test(id('fomeboaGateStatus').textContent))put(id('fomeboaGateStatus'),L('gateWait'));
 }
-function mount(){id('fomeboaLanguage')?.addEventListener('change',event=>setLang(event.target.value));translate();}
+function mount(){id('fomeboaLanguage')?.addEventListener('change',event=>setLang(event.target.value));id('fomeboaGateLanguage')?.addEventListener('change',event=>setLang(event.target.value));translate();}
 root.FomeBoaI18n=Object.freeze({get lang(){return lang},t:L,category:cats,translate,setLang,localizeAuth});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })(typeof globalThis!=='undefined'?globalThis:window);
