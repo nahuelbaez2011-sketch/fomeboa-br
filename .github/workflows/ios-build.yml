@@ -1,4 +1,4 @@
-name: Compilar FomeBoa SP para iPhone (simulador, sin firma)
+name: Compilar FomeBoa SP para iPhone (IPA sin firma y simulador)
 on:
   workflow_dispatch:
   push:
@@ -66,6 +66,36 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/FomeBoaBuild" \
             CODE_SIGNING_ALLOWED=NO \
             build
+      - name: Compilar para iPhone real sin firma (arm64)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/FomeBoaDeviceBuild" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+      - name: Crear IPA sin firma para Windows
+        run: |
+          APP="$RUNNER_TEMP/FomeBoaDeviceBuild/Build/Products/Debug-iphoneos/App.app"
+          test -f "$APP/Info.plist"
+          test -x "$APP/App"
+          mkdir -p "$RUNNER_TEMP/FomeBoaIPA/Payload"
+          cp -R "$APP" "$RUNNER_TEMP/FomeBoaIPA/Payload/App.app"
+          rm -rf "$RUNNER_TEMP/FomeBoaIPA/Payload/App.app/_CodeSignature"
+          rm -f "$RUNNER_TEMP/FomeBoaIPA/Payload/App.app/embedded.mobileprovision"
+          (cd "$RUNNER_TEMP/FomeBoaIPA" && zip -q -r "$GITHUB_WORKSPACE/FomeBoa-SP-Windows-sin-firmar.ipa" Payload)
+          unzip -l FomeBoa-SP-Windows-sin-firmar.ipa | grep 'Payload/App.app/Info.plist'
+          ls -lh FomeBoa-SP-Windows-sin-firmar.ipa
+      - name: Entregar IPA para firmar con Apple ID en Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: FomeBoa-SP-IPA-Windows-para-firmar
+          path: FomeBoa-SP-Windows-sin-firmar.ipa
+          if-no-files-found: error
+          retention-days: 14
       - name: Empaquetar proyecto para Xcode
         if: always()
         run: |
@@ -93,5 +123,5 @@ jobs:
         run: |
           echo '### FomeBoa SP para iPhone' >> "$GITHUB_STEP_SUMMARY"
           echo 'Se generó el proyecto nativo Xcode. El build de simulador, si pasó, no puede instalarse en un iPhone físico.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Para un iPhone real se necesita la firma de Apple mediante Xcode o TestFlight, con credenciales del propietario.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'El IPA generado no tiene firma y se puede firmar e instalar desde Windows con Sideloadly y un Apple ID propio. La instalacion y firma en un iPhone real aun deben probarse.' >> "$GITHUB_STEP_SUMMARY"
           echo 'No se activaron compras ni planes pagos.' >> "$GITHUB_STEP_SUMMARY"
