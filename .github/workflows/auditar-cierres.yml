@@ -1,0 +1,41 @@
+name: Auditar cierres y calidad de locales
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/auditar-cierres.yml'
+      - 'scripts/auditar_cierres.js'
+permissions:
+  contents: write
+concurrency:
+  group: fomeboa-cierre-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout public catalog
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+      - name: Scan every local record
+        run: |
+          node --check scripts/auditar_cierres.js
+          node scripts/auditar_cierres.js
+          node -e "const a=require('./catalogo/auditoria-cierres.json'); const m=require('./catalogo/manifest.json'); if(a.catalogTotal!==m.total||a.sourceClosedStillPublic!==0)process.exit(1)"
+      - name: Record audit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add catalogo/auditoria-cierres.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record catalog-wide closure signal audit and review candidates'
+            git push origin HEAD:main
+          fi
+      - name: Publish updated audit
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST repos/${{ github.repository }}/pages/builds
