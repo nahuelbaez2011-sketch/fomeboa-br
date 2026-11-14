@@ -132,9 +132,9 @@
   };
   function cards(rows){
     el('cards').innerHTML=rows.slice(0,visibleLimit).map(v=>{
-      const query=Number.isFinite(v.lat)&&Number.isFinite(v.lon)?v.lat+','+v.lon:v.name+' '+v.address+' S\u00e3o Paulo Brasil';
+
       const source=safeURL(v.sourceUrl||(v.osmType?'https://www.openstreetmap.org/'+v.osmType+'/'+v.osmId:''));
-      return '<article class="card"><p class="tag">'+esc(v.typeLabel)+' \u00b7 '+esc(v.zones.join(' + '))+'</p><h3>'+esc(v.name)+'</h3><p class="muted">'+esc(v.address||'Direcci\u00f3n no registrada')+'</p>'+(v.cuisine?'<p class="muted">'+esc(v.cuisine)+'</p>':'')+'<p class="catalog-source">Fuente: '+esc(v.source||'OpenStreetMap')+'. Sin calificaci\u00f3n verificada; confirm\u00e1 horarios y apertura con el local.</p><div class="venue-actions"><button class="catalog-fav" data-id="'+esc(v.id)+'">'+(favorites.has(v.id)?'Guardado':'Guardar')+'</button><a target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&amp;query='+encodeURIComponent(query)+'">Ver ubicaci\u00f3n</a>'+(source?'<a target="_blank" rel="noopener noreferrer" href="'+esc(source)+'">Ver fuente</a>':'')+'</div></article>';
+      return '<article class="card"><p class="tag">'+esc(v.typeLabel)+' \u00b7 '+esc(v.zones.join(' + '))+'</p><h3>'+esc(v.name)+'</h3><p class="muted">'+esc(v.address||'Direcci\u00f3n no registrada')+'</p>'+(v.cuisine?'<p class="muted">'+esc(v.cuisine)+'</p>':'')+'<p class="catalog-source">Fuente: '+esc(v.source||'OpenStreetMap')+'. Sin calificaci\u00f3n verificada; confirm\u00e1 horarios y apertura con el local.</p><div class="venue-actions"><button class="catalog-fav" data-id="'+esc(v.id)+'">'+(favorites.has(v.id)?'Guardado':'Guardar')+'</button>'+FomeBoaGoogleMaps.linkHTML(v)+''+(source?'<a target="_blank" rel="noopener noreferrer" href="'+esc(source)+'">Ver fuente</a>':'')+'</div></article>';
     }).join('');
     document.querySelectorAll('.catalog-fav').forEach(b=>b.onclick=()=>{const id=b.dataset.id;if(favorites.has(id))favorites.delete(id);else favorites.add(id);try{localStorage.setItem('fomeboa-favorites',JSON.stringify([...favorites]))}catch(_){}render()});
   }
