@@ -1,0 +1,58 @@
+name: Completar catalogo urbano
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/completar-catalogo.yml'
+      - 'scripts/completar_guarulhos.py'
+permissions:
+  contents: write
+concurrency:
+  group: fomeboa-catalogo
+  cancel-in-progress: false
+jobs:
+  completar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+      - name: Install data readers
+        run: python3 -m pip install --disable-pip-version-check 'duckdb>=1.1,<2' 'shapely>=2,<3'
+      - name: Verify importer tests
+        run: |
+          python3 -m py_compile scripts/ampliar_catalogo.py scripts/completar_guarulhos.py
+          python3 scripts/ampliar_catalogo.py --test
+      - name: Complete Guarulhos and preserve source notices
+        run: python3 -u scripts/completar_guarulhos.py
+      - name: Validate browser script and shared catalogue
+        run: |
+          node --check catalogo.js
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('catalogo')
+          rows=json.loads((root/'todos.json').read_text())
+          manifest=json.loads((root/'manifest.json').read_text())
+          assert len(rows)==manifest['total']
+          assert len({row['id'] for row in rows})==len(rows)
+          assert manifest['total']>=45744
+          assert all(row['source'] and row['name'] and row['zones'] for row in rows)
+          for zone,info in manifest['zones'].items():
+              items=json.loads((root/info['file']).read_text())
+              assert len(items)==info['count']
+              assert all(zone in item['zones'] for item in items)
+          print('Validated',len(rows),'source-labelled entries and all district counts.')
+          PY
+      - name: Save data and attribution
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html catalogo.js catalogo/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Complete urban food catalogue and retain full original source notices'
+            git push origin HEAD:main
+          fi
