@@ -1,7 +1,8 @@
 /* Prepare local web assets that Capacitor bundles for Android and iOS. */
 import fs from 'node:fs';
 import path from 'node:path';
-const root=path.resolve(import.meta.dirname,'..');
+import { fileURLToPath } from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const web=path.join(root,'www');
 const files=['index.html','catalogo.js','catalogo-quality.js','google-maps-links.js','gluten-info.js','auth.js','auth-config.js','distritos-sp.geojson'];
 fs.rmSync(web,{recursive:true,force:true});
