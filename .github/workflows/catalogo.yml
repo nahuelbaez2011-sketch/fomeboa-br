@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/catalogo.yml'
       - 'scripts/catalogo.py'
+      - 'scripts/ampliar_catalogo.py'
       - 'catalogo/curados.json'
 permissions:
   contents: write
@@ -15,36 +16,48 @@ concurrency:
 jobs:
   catalogo:
     runs-on: ubuntu-latest
-    timeout-minutes: 9
+    timeout-minutes: 18
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: main
-      - name: Validate code and connect catalog interface
+      - name: Install open-data readers
+        run: python3 -m pip install --disable-pip-version-check 'duckdb>=1.1,<2' 'shapely>=2,<3'
+      - name: Validate import and existing interface
         run: |
-          python3 -m py_compile scripts/catalogo.py
+          python3 -m py_compile scripts/catalogo.py scripts/ampliar_catalogo.py
+          python3 scripts/ampliar_catalogo.py --test
           node --check catalogo.js
           python3 scripts/catalogo.py --install
-      - name: Import shared open-data catalog
+      - name: Expand shared catalogue from open data
         id: import
         continue-on-error: true
-        run: python3 scripts/catalogo.py
-      - name: Keep the working site if the data provider is unavailable
+        run: |
+          if [ ! -f catalogo/manifest.json ]; then
+            python3 scripts/catalogo.py
+          fi
+          tar -czf /tmp/fomeboa-catalogo-before.tgz catalogo/
+          if ! python3 -u scripts/ampliar_catalogo.py; then
+            rm -rf catalogo/
+            tar -xzf /tmp/fomeboa-catalogo-before.tgz
+            exit 1
+          fi
+      - name: Report unsuccessful expansion without replacing data
         if: steps.import.outcome == 'failure'
         run: |
-          echo '### Importacion no completada' >> "$GITHUB_STEP_SUMMARY"
-          echo 'No se reemplazo el catalogo anterior. La consulta por zona y las propuestas siguen disponibles.' >> "$GITHUB_STEP_SUMMARY"
-      - name: Save catalog and interface
+          echo '### Expansion no completada' >> "$GITHUB_STEP_SUMMARY"
+          echo 'El catalogo anterior fue conservado. No se anuncia ningun incremento.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Save catalogue and interface
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html catalogo/
           if ! git diff --cached --quiet; then
-            git commit -m 'Save shared restaurant catalog and enable restaurant submissions'
+            git commit -m 'Expand shared food catalogue with source-labelled open data'
             git push origin HEAD:main
           fi
       - name: Publishing note
         run: |
           echo '### Publicacion' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Los cambios quedaron en main. Un commit normal posterior publica la version en Pages si se usa publicacion desde rama.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Resultados guardados en main. Un commit normal posterior publica Pages cuando se usa la rama.' >> "$GITHUB_STEP_SUMMARY"
