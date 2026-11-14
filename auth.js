@@ -11,7 +11,7 @@
   const byId=id=>document.getElementById(id);
   const nav=document.querySelector('header .nav');
   if(!nav)return;
-  let user=null,mode='signup',busy=false;
+  let user=null,mode='signup',busy=false,validationToken=0;
   const trigger=document.createElement('button');
   trigger.type='button';trigger.id='fomeboaAccountButton';trigger.textContent='Crear cuenta';
   trigger.setAttribute('aria-haspopup','dialog');nav.appendChild(trigger);
@@ -36,8 +36,27 @@
     '<section id="fomeboaSignedIn" hidden><p id="fomeboaWelcome"></p><p id="fomeboaLevel"></p><p class="fomeboa-auth-small">Tu perfil será el mismo en web, Android e iPhone.</p><button id="fomeboaLogout" type="button">Cerrar sesión</button></section>'
   ].join('');
   document.body.appendChild(dlg);
+  // When a real Supabase project is configured, all app UI requires an authenticated session.
+  // This is a UI gate only: static GitHub Pages files remain public until served by a protected backend.
+  const gate=document.createElement('section');gate.id='fomeboaGate';
+  gate.setAttribute('aria-labelledby','fomeboaGateTitle');
+  gate.innerHTML=[
+    '<div class="fomeboa-gate-card">',
+    '<div class="fomeboa-gate-top"><strong>🍴 FomeBoa SP</strong><label>🌐 <select id="fomeboaGateLanguage" aria-label="Language / Idioma"><option value="es">Español</option><option value="pt">Português</option><option value="en">English</option></select></label></div>',
+    '<h1 id="fomeboaGateTitle">Bienvenido a FomeBoa SP</h1>',
+    '<p id="fomeboaGateText">Registrate o iniciá sesión para descubrir la gastronomía de São Paulo.</p>',
+    '<div class="fomeboa-gate-actions"><button id="fomeboaGateSignup" type="button">Crear mi cuenta</button><button id="fomeboaGateLogin" type="button">Ya tengo cuenta</button></div>',
+    '<p id="fomeboaGateStatus" role="status" aria-live="polite">Verificando tu sesión...</p>',
+    '<p id="fomeboaGateHelp">Tu perfil reúne tus valoraciones, niveles y aportes. No compartimos listas de correos con anunciantes.</p>',
+    '</div>'
+  ].join('');
+  gate.hidden=!client;document.body.appendChild(gate);
+  if(client)document.documentElement.classList.add('fomeboa-auth-locked');
+  byId('fomeboaGateSignup').onclick=()=>{mode='signup';notice('');render();dlg.showModal()};
+  byId('fomeboaGateLogin').onclick=()=>{mode='login';notice('');render();dlg.showModal()};
   const css=document.createElement('style');
   css.textContent='#fomeboaAccountButton{padding:8px 13px;font-weight:800;font-size:13px;background:#ebd16c;color:#153c26;border-color:#e6cb53;border-radius:10px;margin-left:auto}#fomeboaAuthDialog{box-sizing:border-box;background:#173b2e;color:#f3f8f1;border:1px solid #56846b;border-radius:17px;padding:20px;width:min(430px,calc(100vw - 24px));max-height:90vh;overflow:auto}#fomeboaAuthDialog::backdrop{background:#071c18bd}.fomeboa-auth-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.fomeboa-auth-head h2{margin:0;font-size:22px}.fomeboa-auth-head button{font-size:24px;background:transparent;border:0;padding:2px 8px}#fomeboaAuthDialog label{display:block;font-size:13px;font-weight:700;margin:12px 0}#fomeboaAuthDialog label input{margin-top:5px}#fomeboaAuthDialog button[type=submit]{width:100%;background:#f0d35f;color:#183c29;font-weight:800}#fomeboaAuthModes[hidden]{display:none!important}#fomeboaAuthModes{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}#fomeboaAuthModes button{font-size:12px;color:#f4d879;border:0;background:transparent;text-decoration:underline;padding:6px}#fomeboaAuthNote{font-size:13px;color:#f5dc87;line-height:1.45}#fomeboaLevel{color:#f2db73;font-weight:800}.fomeboa-auth-small{font-size:12px;color:#c4dace}@media(max-width:550px){#fomeboaAccountButton{margin-left:0}}';
+  css.textContent+='#fomeboaGate{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at top,#1d5140,#0b211a 73%);padding:18px;overflow:auto;box-sizing:border-box}#fomeboaGate[hidden]{display:none!important}.fomeboa-gate-card{max-width:480px;width:100%;padding:25px;background:#153b2d;border:1px solid #54856a;box-shadow:0 12px 60px #0008;border-radius:20px;box-sizing:border-box}.fomeboa-gate-top{display:flex;align-items:center;justify-content:space-between;gap:10px}.fomeboa-gate-top strong{font-size:18px;color:#f5d67d}.fomeboa-gate-top select{width:auto;margin:0;padding:6px;font-size:12px}.fomeboa-gate-card h1{font-size:clamp(23px,5vw,33px);line-height:1.2;margin:25px 0 8px}.fomeboa-gate-card>p{color:#d6e5d7;line-height:1.55}.fomeboa-gate-actions{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}.fomeboa-gate-actions button{flex:1;min-width:150px;font-size:14px;font-weight:800}.fomeboa-gate-actions button:first-child{background:#f2d565;color:#143322}.fomeboa-gate-card #fomeboaGateStatus{font-size:12px;color:#ffde8d}.fomeboa-gate-card #fomeboaGateHelp{font-size:12px;color:#b5d1c2}';
   document.head.appendChild(css);
   function notice(s){byId('fomeboaAuthNote').textContent=s||''}
   function render(){
@@ -55,6 +74,8 @@
     byId('fomeboaAuthSubmit').textContent=mode==='signup'?'Crear cuenta':mode==='reset'?'Recuperar contraseña':'Iniciar sesión';
     byId('fomeboaAuthTitle').textContent=mode==='change'?'Cambiar contraseña':user?'Mi perfil FomeBoa':mode==='signup'?'Crear cuenta':mode==='reset'?'Recuperar acceso':'Iniciar sesión';
     trigger.textContent=user?'Mi perfil':client?'Crear cuenta':'Cuenta · próximamente';
+    if(client){gate.hidden=!!user;document.documentElement.classList.toggle('fomeboa-auth-locked',!user);}
+    window.FomeBoaI18n?.localizeAuth?.();
     if(!enabled)notice('El registro real se habilitará cuando conectemos Supabase.');
   }
   function open(){mode=user?'profile':'signup';notice('');render();dlg.showModal()}
@@ -100,7 +121,7 @@
       byId('fomeboaPassword').value='';
       if(mode==='reset'){notice('Si existe una cuenta con ese correo, recibirás un enlace.');return}
       if(mode==='signup'&&!result.data?.session){mode='login';render();notice('Revisá tu correo y confirmá la cuenta para poder ingresar.');return}
-      if(result.data?.user){setUser(result.data.user);await loadProfile();notice('Sesión iniciada.')}
+      if(result.data?.user){await verifyUser(result.data.user.id);if(user){await loadProfile();notice('Sesión iniciada.');dlg.close();}else notice('No se pudo confirmar la sesión. Volvé a ingresar.');}
     }catch(error){notice(messageFor(error))}
     finally{busy=false;byId('fomeboaAuthSubmit').disabled=false}
   };
@@ -117,10 +138,39 @@
     try{const r=await client.auth.signOut();if(r.error)throw r.error;setUser(null);notice('Sesión cerrada.')}
     catch(error){notice(messageFor(error))}
   };
+  async function verifyUser(expectedId){
+    if(!client)return;
+    const ticket=++validationToken;
+    try{
+      const result=await client.auth.getUser();
+      if(ticket!==validationToken)return;
+      const found=!result.error&&result.data?.user&&(!expectedId||result.data.user.id===expectedId)?result.data.user:null;
+      setUser(found||null);
+      if(found)await loadProfile();
+      else byId('fomeboaGateStatus').textContent='Ingresá o creá una cuenta para continuar.';
+    }catch(_){
+      if(ticket!==validationToken)return;
+      setUser(null);
+      byId('fomeboaGateStatus').textContent='No se pudo verificar la sesión. Probá nuevamente.';
+    }
+  }
   if(client)client.auth.onAuthStateChange((event,session)=>{
-    if(event==='PASSWORD_RECOVERY'){setUser(session?.user);mode='change';render();dlg.showModal();notice('Ingresá una contraseña nueva.');return}
-    if(['INITIAL_SESSION','SIGNED_IN','SIGNED_OUT'].includes(event)){setUser(session?.user);if(session?.user)queueMicrotask(loadProfile)}
+    if(event==='SIGNED_OUT'){
+      validationToken++;
+      setUser(null);
+      byId('fomeboaGateStatus').textContent='';
+      return;
+    }
+    if(event==='PASSWORD_RECOVERY'){
+      queueMicrotask(async()=>{await verifyUser(session?.user?.id);if(user){mode='change';render();dlg.showModal();notice('Ingresá una contraseña nueva.');}});
+      return;
+    }
+    if(['INITIAL_SESSION','SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(event)){
+      if(!session?.user){validationToken++;setUser(null);return;}
+      queueMicrotask(()=>verifyUser(session.user.id));
+    }
   });
   render();
-  window.FomeBoaAuth=Object.freeze({enabled:!!client,open,isSignedIn:()=>!!user});
+  window.FomeBoaAuth=Object.freeze({enabled:!!client,open,isSignedIn:()=>!!user,refresh:()=>{render();window.FomeBoaI18n?.localizeAuth?.();}});
+
 })();
