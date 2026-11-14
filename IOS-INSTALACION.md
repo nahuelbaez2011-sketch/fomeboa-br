@@ -27,26 +27,49 @@ El artefacto **FomeBoa-SP-simulador-NO-instalar-en-iPhone** es exclusivamente
 para un simulador de iPhone: no es un IPA firmado y **no se instala en un
 iPhone real**.
 
-## Cómo instalarla gratis en TU iPhone para probar
+## Instalarla gratis en un iPhone usando solamente Windows
 
-Apple permite instalar y probar aplicaciones propias con un Apple Account
-gratuito en un iPhone conectado a **una Mac con Xcode**:
+Se puede probar sin Mac y sin pagar Apple Developer, usando el IPA
+sin firmar construido en GitHub Actions y un programa de instalación
+compatible con Apple ID gratuito, como Sideloadly.
 
-1. Instalá Xcode 26 o posterior en una Mac compatible.
-2. Entrá a **Xcode > Settings > Accounts** con tu cuenta Apple.
-3. Abrí el proyecto `ios/App/App.xcodeproj`.
-4. En **Signing & Capabilities**, activá `Automatically manage signing`
-   y seleccioná tu **Personal Team**.
-5. Conectá tu iPhone y, si iOS lo solicita, activá Developer Mode y confiá
-   en la computadora.
-6. Elegí tu iPhone como destino en Xcode y presioná **Run**.
+1. En la ejecución más reciente que termine exitosamente del flujo
+   [Compilar FomeBoa SP para iPhone](https://github.com/nahuelbaez2011-sketch/fomeboa-br/actions/workflows/ios-build.yml),
+   descargá el artefacto **FomeBoa-SP-IPA-Windows-para-firmar**.
+2. Extraé el ZIP descargado. Adentro está
+   `FomeBoa-SP-Windows-sin-firmar.ipa`.
+3. Descargá Sideloadly exclusivamente desde su página oficial:
+   https://sideloadly.io/ .
+4. En Windows, conectá tu iPhone con un cable y aceptá "Confiar en
+   esta computadora" en el teléfono. Si Sideloadly no lo detecta,
+   instalá los controladores de Apple indicados por Sideloadly.
+5. En Sideloadly elegí tu iPhone, arrastrá el archivo IPA, ingresá el
+   Apple ID desde la propia aplicación de firma y presioná Start.
+   No compartas tus contraseñas ni códigos de verificación con
+   FomeBoa, GitHub o ChatGPT.
+6. En el iPhone, si se solicita, activá el modo desarrollador en
+   **Ajustes > Privacidad y seguridad > Modo desarrollador** y
+   autorizá la aplicación en
+   **Ajustes > General > VPN y gestión de dispositivos**.
+7. Con un Apple ID gratuito la firma normalmente dura **7 días**:
+   Sideloadly puede volver a firmarla mientras tu PC siga disponible.
 
-Apple indica que el aprovisionamiento de Personal Team caduca al cabo de
-**7 días** y es necesario reinstalar la aplicación. No se requiere pagar
-Apple Developer Program para estas pruebas personales.
+**Aviso:** este método instala una app de pruebas para uso propio,
+no la publica en App Store ni verifica automáticamente todas sus
+funcionalidades. El IPA original se entrega sin firma; sólo el
+equipo del usuario puede instalarlo firmándolo con su cuenta.
+Sideloadly es un programa de terceros; revisá sus condiciones y
+sus permisos antes de introducir tu cuenta Apple.
 
-Referencia oficial:
-https://developer.apple.com/la/help/account/basics/about-your-developer-account
+Referencias:
+- https://sideloadly.io/
+- https://sideloadly.io/faq.html
+
+## Alternativa con una Mac
+
+Con Xcode y una cuenta Apple gratuita también es posible instalar
+la aplicación en un iPhone conectado a la Mac, utilizando un equipo
+de desarrollo personal. Las firmas gratuitas duran siete días.
 
 ## Para TestFlight y App Store
 
