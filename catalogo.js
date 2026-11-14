@@ -144,7 +144,7 @@
     const rows=visibleVenues();if(rows.length)cards(rows);
     if(showAll){el('total').textContent='('+rows.length+' locales del cat\u00e1logo guardado)';if(!rows.length)el('cards').innerHTML='<p>No hay locales guardados que coincidan con estos filtros.</p>';}
     $('catalogAll').disabled=busyAll||!manifest;
-    $('catalogInfo').textContent=message||(manifest?manifest.total+' locales guardados en el \u00e1rea urbana. Fuente: OpenStreetMap y fichas revisadas. Actualizaci\u00f3n: '+new Date(manifest.generatedAt).toLocaleDateString('es-ES')+'. No representa todos los negocios de Google Maps.':'Consultando el cat\u00e1logo compartido...');
+    $('catalogInfo').textContent=message||(manifest?manifest.total+' locales guardados en el \u00e1rea urbana. Fuentes: OpenStreetMap, Overture Maps y fichas revisadas. Actualizaci\u00f3n: '+new Date(manifest.generatedAt).toLocaleDateString('es-ES')+'. No representa todos los negocios de Google Maps.':'Consultando el cat\u00e1logo compartido...');
     draftText();
   };
   $('catalogAll').onclick=async()=>{
