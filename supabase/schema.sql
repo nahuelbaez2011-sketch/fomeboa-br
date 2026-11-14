@@ -35,7 +35,7 @@ as $$
 declare
   chosen_name text;
 begin
-  chosen_name := pg_catalog.btrim(pg_catalog.coalesce(new.raw_user_meta_data ->> 'display_name', ''));
+  chosen_name := pg_catalog.btrim(coalesce(new.raw_user_meta_data ->> 'display_name', ''));
   if pg_catalog.char_length(chosen_name) < 2 then
     chosen_name := 'Explorador';
   end if;
