@@ -1,0 +1,58 @@
+name: Recuento y calidad del catalogo
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/calidad-catalogo.yml'
+      - 'catalogo-quality.js'
+      - 'scripts/aplicar-calidad.js'
+  workflow_run:
+    workflows: ['Catalogo gastronomico', 'Completar catalogo urbano']
+    types: [completed]
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: fomeboa-catalogo
+  cancel-in-progress: false
+jobs:
+  calidad:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+      - name: Test closure matching and neutral category counts
+        run: |
+          node --check catalogo-quality.js
+          node --check scripts/aplicar-calidad.js
+          node scripts/aplicar-calidad.js --test
+      - name: Apply corrections and verify real sidebar rendering
+        run: |
+          node scripts/aplicar-calidad.js
+          node --check catalogo.js
+          node --check google-maps-links.js
+      - name: Confirm repeat runs preserve data and output
+        run: |
+          sha256sum index.html catalogo.js catalogo/todos.json catalogo/manifest.json > /tmp/catalogo-quality-before.sha
+          node scripts/aplicar-calidad.js
+          sha256sum --check /tmp/catalogo-quality-before.sha
+          git diff --exit-code -- distritos-sp.geojson google-maps-links.js
+      - name: Save public catalog and corrected sidebar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html catalogo.js catalogo/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Hide reported closed venue and display category counts instead of sidebar recommendations'
+            git push origin HEAD:main
+          fi
+      - name: Request Pages publication
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST repos/${{ github.repository }}/pages/builds
