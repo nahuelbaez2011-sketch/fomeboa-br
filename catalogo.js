@@ -113,7 +113,7 @@
         if(!/^zonas\/[a-z0-9-]+\.json$/.test(info.file))return false;
         const r=await fetch('./catalogo/'+info.file);if(!r.ok)throw Error('No disponible');const rows=await r.json();
         if(!Array.isArray(rows)||rows.some(v=>!v.id||!v.name||!Array.isArray(v.zones)||!v.zones.includes(name)))throw Error('Datos inv\u00e1lidos');
-        poiByZone.set(name,rows);hydrated.add(name);failedZones.delete(name);render();return true;
+        poiByZone.set(name,FomeBoaCatalogQuality.filter(rows));hydrated.add(name);failedZones.delete(name);render();return true;
       }catch(_){return false}
     })();
     hydration.set(name,promise);
@@ -125,9 +125,9 @@
   };
   toggle=function(name){const outcome=oldToggle(name);if(chosen.has(name))hydrate(name);return outcome};
   visibleVenues=function(){
-    if(!showAll||chosen.size)return oldVisible();
+    if(!showAll||chosen.size)return FomeBoaCatalogQuality.filter(oldVisible());
     const q=fold(el('search').value),type=el('category').value,order=el('order').value;
-    const rows=(allRows||[]).filter(v=>(!onlyFavorites||favorites.has(v.id))&&(!type||type===v.type)&&(!q||fold([v.name,v.typeLabel,v.address,v.cuisine,...v.zones].join(' ')).includes(q)));
+    const rows=FomeBoaCatalogQuality.filter(allRows||[]).filter(v=>(!onlyFavorites||favorites.has(v.id))&&(!type||type===v.type)&&(!q||fold([v.name,v.typeLabel,v.address,v.cuisine,...v.zones].join(' ')).includes(q)));
     return rows.sort((a,b)=>order==='type'?a.typeLabel.localeCompare(b.typeLabel,'pt-BR')||a.name.localeCompare(b.name,'pt-BR'):a.name.localeCompare(b.name,'pt-BR'));
   };
   function cards(rows){
