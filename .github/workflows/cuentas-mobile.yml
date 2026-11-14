@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/cuentas-mobile.yml'
       - 'auth.js'
+      - 'i18n.js'
       - 'auth-config.js'
       - 'supabase/schema.sql'
       - 'index.html'
@@ -24,6 +25,7 @@ jobs:
       - name: Check account scripts
         run: |
           node --check auth.js
+          node --check i18n.js
           node --check auth-config.js
           node --check catalogo.js
           node --check scripts/preparar-mobile.mjs
@@ -35,7 +37,7 @@ jobs:
           const a=fs.readFileSync('auth.js','utf8');
           const config=fs.readFileSync('auth-config.js','utf8');
           const schema=fs.readFileSync('supabase/schema.sql','utf8');
-          assert(h.includes('<head>')&&h.includes('</head>')&&h.includes('auth.js?v=1'));
+          assert(h.includes('<head>')&&h.includes('</head>')&&h.includes('auth.js?v=2'));
           assert(h.includes('auth-config.js?v=1'));
           assert(a.includes('supabase.createClient')&&a.includes('auth.signUp')&&a.includes('auth.signInWithPassword'));
           assert(a.includes('auth.resetPasswordForEmail')&&a.includes('auth.signOut'));
@@ -54,6 +56,7 @@ jobs:
           node scripts/preparar-mobile.mjs
           test -f www/index.html
           test -f www/auth.js
+          test -f www/i18n.js
           test -f www/catalogo/manifest.json
           test -f www/distritos-sp.geojson
       - name: Security and packaging report
