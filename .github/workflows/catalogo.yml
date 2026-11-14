@@ -1,0 +1,50 @@
+name: Catalogo gastronomico
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/catalogo.yml'
+      - 'scripts/catalogo.py'
+      - 'catalogo/curados.json'
+permissions:
+  contents: write
+concurrency:
+  group: fomeboa-catalogo
+  cancel-in-progress: false
+jobs:
+  catalogo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+      - name: Validate code and connect catalog interface
+        run: |
+          python3 -m py_compile scripts/catalogo.py
+          node --check catalogo.js
+          python3 scripts/catalogo.py --install
+      - name: Import shared open-data catalog
+        id: import
+        continue-on-error: true
+        run: python3 scripts/catalogo.py
+      - name: Keep the working site if the data provider is unavailable
+        if: steps.import.outcome == 'failure'
+        run: |
+          echo '### Importacion no completada' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No se reemplazo el catalogo anterior. La consulta por zona y las propuestas siguen disponibles.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Save catalog and interface
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html catalogo/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Save shared restaurant catalog and enable restaurant submissions'
+            git push origin HEAD:main
+          fi
+      - name: Publishing note
+        run: |
+          echo '### Publicacion' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Los cambios quedaron en main. Un commit normal posterior publica la version en Pages si se usa publicacion desde rama.' >> "$GITHUB_STEP_SUMMARY"
