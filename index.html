@@ -43,7 +43,7 @@ function render(){
  el('zones').innerHTML=chips.map(name=>'<button data-zone="'+esc(name)+'" class="'+(chosen.has(name)?'active':'')+'">'+(chosen.has(name)?'✓ ':'')+esc(name)+'</button>').join('');
  document.querySelectorAll('[data-zone]').forEach(b=>b.onclick=()=>toggle(b.dataset.zone));
  el('selectionCount').textContent=chosen.size;
- const selectionBox=el('selectionChips').closest('.selection-box');if(selectionBox)selectionBox.classList.toggle('is-empty',chosen.size===0);
+ const selectionBox=el('selectionChips').closest?.('.selection-box');if(selectionBox)selectionBox.classList.toggle('is-empty',chosen.size===0);
  el('selectionChips').innerHTML=chosen.size?[...chosen].map(name=>'<button data-remove="'+esc(name)+'" title="Quitar '+esc(name)+'">'+esc(name)+' ×</button>').join(''):'<span class="mini-note">Tocá una zona en el mapa para explorar.</span>';
  document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>toggle(b.dataset.remove));
  const rows=visibleVenues(),loaded=[...chosen].filter(n=>poiByZone.has(n)),loading=[...chosen].filter(n=>loadingZones.has(n)),failed=[...chosen].filter(n=>failedZones.has(n));
