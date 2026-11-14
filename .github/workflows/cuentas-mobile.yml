@@ -1,0 +1,63 @@
+name: Verificar cuentas y empaquetado móvil
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cuentas-mobile.yml'
+      - 'auth.js'
+      - 'auth-config.js'
+      - 'supabase/schema.sql'
+      - 'index.html'
+      - 'package.json'
+      - 'capacitor.config.json'
+      - 'scripts/preparar-mobile.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Check account scripts
+        run: |
+          node --check auth.js
+          node --check auth-config.js
+          node --check catalogo.js
+          node --check scripts/preparar-mobile.mjs
+      - name: Validate safe defaults and mobile config
+        run: |
+          node - <<'JS'
+          const fs=require('node:fs');const assert=require('node:assert/strict');
+          const h=fs.readFileSync('index.html','utf8');
+          const a=fs.readFileSync('auth.js','utf8');
+          const config=fs.readFileSync('auth-config.js','utf8');
+          const schema=fs.readFileSync('supabase/schema.sql','utf8');
+          assert(h.includes('<head>')&&h.includes('</head>')&&h.includes('auth.js?v=1'));
+          assert(h.includes('auth-config.js?v=1'));
+          assert(a.includes('supabase.createClient')&&a.includes('auth.signUp')&&a.includes('auth.signInWithPassword'));
+          assert(a.includes('auth.resetPasswordForEmail')&&a.includes('auth.signOut'));
+          assert(a.includes('Cuenta · próximamente'));
+          assert(/url:\s*""/.test(config)&&/publishableKey:\s*""/.test(config));
+          assert(!/sb_secret_|service_role\s*:/.test(config.replace(/\/\*[\s\S]*?\*\//g,'')));
+          assert(schema.includes('enable row level security'));
+          assert(schema.includes('grant update (display_name)'));
+          assert(schema.includes('revoke all on table public.fomeboa_profiles'));
+          assert(!schema.includes('pg_catalog.coalesce'));
+          const pkg=require('./package.json');const capacitor=require('./capacitor.config.json');
+          assert(pkg.scripts['build:mobile']&&capacitor.appId==='com.fomeboa.sp');
+          JS
+      - name: Prepare Android and iOS web bundle
+        run: |
+          node scripts/preparar-mobile.mjs
+          test -f www/index.html
+          test -f www/auth.js
+          test -f www/catalogo/manifest.json
+          test -f www/distritos-sp.geojson
+      - name: Security and packaging report
+        run: |
+          echo '### FomeBoa account and mobile checks passed' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Web account UI and shared mobile web assets verified. No live Supabase credentials configured and no native binaries published.' >> "$GITHUB_STEP_SUMMARY"
