@@ -127,7 +127,7 @@
   visibleVenues=function(){
     if(!showAll||chosen.size)return FomeBoaCatalogQuality.filter(oldVisible());
     const q=fold(el('search').value),type=el('category').value,order=el('order').value;
-    const rows=FomeBoaCatalogQuality.filter(allRows||[]).filter(v=>(!onlyFavorites||favorites.has(v.id))&&(!type||type===v.type)&&(!q||fold([v.name,v.typeLabel,v.address,v.cuisine,...v.zones].join(' ')).includes(q)));
+    const rows=FomeBoaCatalogQuality.filter(allRows||[]).filter(v=>(!onlyFavorites||favorites.has(v.id))&&(!el('glutenOnly').checked||FomeBoaGluten.matches(v))&&(!type||type===v.type)&&(!q||fold([v.name,v.typeLabel,v.address,v.cuisine,...v.zones].join(' ')).includes(q)));
     return rows.sort((a,b)=>order==='type'?a.typeLabel.localeCompare(b.typeLabel,'pt-BR')||a.name.localeCompare(b.name,'pt-BR'):a.name.localeCompare(b.name,'pt-BR'));
   };
   function closureReportLink(venue){
@@ -162,7 +162,7 @@
       const address=String(v.address||'Dirección sin registrar');
       return '<article class="card compact-card">'
         +'<div class="compact-top"><p class="tag">'+esc(v.typeLabel)+' · '+esc((v.zones||[]).join(' + '))+'</p><button type="button" class="catalog-fav compact-fav" data-id="'+esc(v.id)+'" aria-label="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'" aria-pressed="'+String(saved)+'" title="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'">'+(saved?'♥':'♡')+'</button></div>'
-        +'<h3 title="'+esc(v.name)+'">'+esc(v.name)+'</h3>'
+        + '<h3 title="'+esc(v.name)+'">'+esc(v.name)+'</h3>' + FomeBoaGluten.badge(v)
         +'<p class="compact-address" title="'+esc(address)+'">'+esc(address)+'</p>'
         +'<div class="compact-actions">'+mapLink+'</div>'
         +'<details class="compact-details"><summary>Más información</summary><div class="compact-extra">'
@@ -170,7 +170,7 @@
         +'<p>Fuente: '+esc(v.source||'OpenStreetMap')+'. Estado de apertura no verificado.</p>'
         +(alternativeLink?'<a target="_blank" rel="noopener noreferrer" href="'+esc(alternativeLink)+'">Buscar solo por nombre en Google Maps</a>':'')
         +(source?'<a target="_blank" rel="noopener noreferrer" href="'+esc(source)+'">Ver fuente</a>':'')
-        +closureReportLink(v)
+        +FomeBoaGluten.detail(v)+closureReportLink(v)
         +'</div></details></article>';
     }).join('');
     document.querySelectorAll('.catalog-fav').forEach(b=>b.onclick=()=>{
