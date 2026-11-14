@@ -1,19 +1,22 @@
 {
   "name": "fomeboa-sp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "FomeBoa SP: catálogo gastronómico compartido entre web, Android e iOS",
+  "description": "FomeBoa SP - aplicacion gastronomica para iPhone, Android y web",
   "scripts": {
     "build:mobile": "node scripts/preparar-mobile.mjs",
     "mobile:android": "npm run build:mobile && npx cap sync android",
-    "mobile:ios": "npm run build:mobile && npx cap sync ios"
+    "mobile:ios": "npm run build:mobile && npx cap sync ios",
+    "ios:prepare": "npm run build:mobile && npx cap add ios && npx cap sync ios",
+    "ios:sync": "npm run build:mobile && npx cap sync ios",
+    "ios:open": "npx cap open ios"
   },
   "dependencies": {
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/android": "^8.0.0",
-    "@capacitor/ios": "^8.0.0"
+    "@capacitor/core": "8.6.2",
+    "@capacitor/android": "8.6.2",
+    "@capacitor/ios": "8.6.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
+    "@capacitor/cli": "8.6.2"
   }
 }
