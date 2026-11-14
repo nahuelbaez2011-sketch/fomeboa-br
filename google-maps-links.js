@@ -47,11 +47,11 @@
     base.searchParams.set('query',businessQuery(venue,options.nameOnly));
     if (!options.nameOnly && verified && validId(placeId)) {
       base.searchParams.set('query_place_id',placeId);
-      return {href:base.href,kind:'verified',label:'Abrir ficha en Google Maps',note:'Enlace del establecimiento revisado; comprob\u00e1 que sea la sucursal correcta.'};
+      return {href:base.href,kind:'verified',label:'Ver ubicación en Google Maps',note:'Enlace del establecimiento revisado; comprob\u00e1 que sea la sucursal correcta.'};
     }
     const link = !options.nameOnly && verified ? safeListingURL(details.url || venue.googleMapsUrl) : '';
-    if (link) return {href:link,kind:'verified',label:'Abrir ficha en Google Maps',note:'Enlace del establecimiento revisado; comprob\u00e1 que sea la sucursal correcta.'};
-    return {href:base.href,kind:'search',label:options.nameOnly?'Buscar solo por nombre':'Buscar negocio en Google Maps',note:'B\u00fasqueda por nombre y direcci\u00f3n. Ficha de Google Maps a\u00fan no verificada.'};
+    if (link) return {href:link,kind:'verified',label:'Ver ubicación en Google Maps',note:'Enlace del establecimiento revisado; comprob\u00e1 que sea la sucursal correcta.'};
+    return {href:base.href,kind:'search',label:options.nameOnly?'Buscar solo por nombre':'Ver ubicación en Google Maps',note:'B\u00fasqueda por nombre y direcci\u00f3n. Ficha de Google Maps a\u00fan no verificada.'};
   }
   function linkHTML(venue) {
     const result = resolve(venue);
