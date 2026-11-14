@@ -148,21 +148,27 @@
     const qs=new URLSearchParams({title:'Revisar estado de local: '+String(venue.name||''),body:details.join('\n')});
     return '<a class="catalog-report" target="_blank" rel="noopener noreferrer" href="https://github.com/nahuelbaez2011-sketch/fomeboa-br/issues/new?'+qs.toString().replace(/&/g,'&amp;')+'" title="Informar un posible cierre o un error de ubicación. Necesita revisión antes de retirar la ficha.">Reportar cierre o error</a>';
   }
+  const venueInitials = Object.freeze({
+    restaurant:'R',cafe:'C',bar:'B',bakery:'P',pastry:'T',
+    pub:'B',fast_food:'L',food_court:'F',ice_cream:'H',
+    biergarten:'B',confectionery:'D',coffee:'C',deli:'D'
+  });
   function cards(rows){
     el('cards').innerHTML=rows.slice(0,visibleLimit).map(v=>{
       const source=safeURL(v.sourceUrl||(v.osmType?'https://www.openstreetmap.org/'+v.osmType+'/'+v.osmId:''));
       const maps=FomeBoaGoogleMaps.resolve(v);
       const url=maps.href?safeURL(maps.href):'';
       const mapLink=url
-        ?'<a class="compact-google" data-verified="'+String(maps.kind==='verified')+'" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(maps.note)+'">'+(maps.kind==='verified'?'★ Ver puntuación en Google Maps':'★ Buscar puntuación en Google Maps')+' ↗</a>'
+        ?'<a class="compact-google" data-verified="'+String(maps.kind==='verified')+'" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(maps.note)+'">📍 Ver ubicación en Google Maps ↗</a>'
         :'<span class="compact-no-map">Ubicación sin verificar</span>';
       const alternative=maps.kind==='search'&&v.address?FomeBoaGoogleMaps.resolve(v,{nameOnly:true}):null;
       const alternativeLink=alternative&&alternative.href?safeURL(alternative.href):'';
       const saved=favorites.has(v.id);
       const address=String(v.address||'Dirección sin registrar');
       return '<article class="card compact-card" data-type="'+esc(v.type)+'">'
-        +'<div class="compact-top"><p class="tag">'+esc(v.typeLabel)+' · '+esc((v.zones||[]).join(' + '))+'</p><button type="button" class="catalog-fav compact-fav" data-id="'+esc(v.id)+'" aria-label="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'" aria-pressed="'+String(saved)+'" title="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'">'+(saved?'♥':'♡')+'</button></div>'
-        + '<h3 title="'+esc(v.name)+'"><span class="venue-kind-icon" aria-hidden="true">'+({'restaurant':'🍽️','cafe':'☕','bar':'🍸','bakery':'🥖','pastry':'🍰','pub':'🍺','fast_food':'🍔','food_court':'🍽️','ice_cream':'🍦','biergarten':'🍻','confectionery':'🍰','coffee':'☕','deli':'🥪'}[v.type]||'🍴')+'</span>'+esc(v.name)+'</h3>' + FomeBoaGluten.badge(v)
+        +'<div class="compact-top"><h3 title="'+esc(v.name)+'"><span class="venue-kind-icon venue-initial" aria-hidden="true">'+esc(venueInitials[v.type]||'G')+'</span><span class="venue-name">'+esc(v.name)+'</span></h3><button type="button" class="catalog-fav compact-fav" data-id="'+esc(v.id)+'" aria-label="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'" aria-pressed="'+String(saved)+'" title="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'">'+(saved?'♥':'♡')+'</button></div>'
+        +'<p class="tag compact-subtitle">'+esc(v.typeLabel)+' · '+esc((v.zones||[]).join(' + '))+'</p>'
+        +FomeBoaGluten.badge(v)
         +'<p class="compact-address" title="'+esc(address)+'">'+esc(address)+'</p>'
         +'<div class="compact-actions">'+mapLink+'</div>'
         +'<details class="compact-details"><summary>Más información</summary><div class="compact-extra">'
