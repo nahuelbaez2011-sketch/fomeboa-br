@@ -20,24 +20,95 @@ function renderAds(){const list=demoAds.filter(ad=>chosen.has(ad.zone));el('adSc
  document.querySelectorAll('.fav').forEach(b=>b.onclick=()=>{if(favorites.has(b.dataset.fav))favorites.delete(b.dataset.fav);else favorites.add(b.dataset.fav);try{localStorage.setItem('fomeboa-favorites',JSON.stringify([...favorites]))}catch(e){}render()});
  document.querySelectorAll('.more').forEach(b=>b.onclick=()=>{let d=b.parentElement.querySelector('.details');d.hidden=!d.hidden;b.textContent=d.hidden?'Ver detalles':'Ocultar detalles'});
 }
-const metroBounds=L.latLngBounds([[-23.80,-46.90],[-23.36,-46.38]]);const homeCenter=[-23.565,-46.625];const homeZoom=11;const zoneLabels=new Map(),zoneShapes=new Map(),boundaryCache=new Map();
-function syncZoneLabels(){for(const [name,marker] of zoneLabels){const node=marker.getElement()?.querySelector('.zone-name');if(node){node.classList.toggle('selected',chosen.has(name));node.setAttribute('aria-pressed',String(chosen.has(name)))}}el('selectedSummary').textContent=chosen.size?'Zonas seleccionadas: '+[...chosen].join(' + '):'Ninguna zona seleccionada'}
+const metroBounds=L.latLngBounds([[-23.80,-46.90],[-23.35,-46.36]]),homeCenter=[-23.562,-46.621],homeZoom=11;
+const zoneLabels=new Map(),zoneShapes=new Map(),boundaryCache=new Map();
+const labelPriority=new Map(featuredDistricts.map((name,i)=>[name,i]));
+function districtStyle(name){return chosen.has(name)?{color:'#070707',weight:4,opacity:1,fillColor:'#ffdf40',fillOpacity:.26}:{color:'#111111',weight:2.2,opacity:.90,fillColor:'#ffffff',fillOpacity:.005}}
+function addZoneLabel(name,point){
+ const marker=L.marker(point,{icon:L.divIcon({className:'zone-label-wrap',html:'<span class="zone-name" role="button" tabindex="0" aria-pressed="false">'+name+'</span>',iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:1000,keyboard:false}).addTo(map);
+ marker.on('click',()=>toggle(name));
+ const label=marker.getElement()?.querySelector('.zone-name');
+ if(label)label.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle(name)}});
+ zoneLabels.set(name,marker);
+}
+function updateLabels(){
+ if(!map)return;
+ const zoom=map.getZoom(),size=map.getSize(),used=[];
+ const all=[...zoneLabels.entries()].sort((a,b)=>(chosen.has(b[0])?1:0)-(chosen.has(a[0])?1:0)||(labelPriority.get(a[0])??200)-(labelPriority.get(b[0])??200));
+ for(const [name,marker] of all){
+  const elem=marker.getElement(),span=elem?.querySelector('.zone-name');if(!elem||!span)continue;
+  const point=map.latLngToContainerPoint(marker.getLatLng());
+  const priority=labelPriority.has(name);
+  const showCandidate=zoom>=12||priority||chosen.has(name);
+  const width=Math.max(58,Math.min(155,name.length*(zoom>=12?7.6:7.2)+18)),height=30;
+  const rect={left:point.x-width/2-4,right:point.x+width/2+4,top:point.y-height/2-5,bottom:point.y+height/2+5};
+  const visible=showCandidate&&point.x>-90&&point.x<size.x+90&&point.y>-30&&point.y<size.y+30;
+  const collides=used.some(r=>rect.left<r.right&&rect.right>r.left&&rect.top<r.bottom&&rect.bottom>r.top);
+  const show=visible&&(chosen.has(name)||!collides);
+  elem.style.display=show?'':'none';
+  if(show)used.push(rect);
+ }
+}
+function syncZoneLabels(){
+ for(const [name,marker] of zoneLabels){const n=marker.getElement()?.querySelector('.zone-name');if(n){n.classList.toggle('selected',chosen.has(name));n.setAttribute('aria-pressed',String(chosen.has(name)))}}
+ for(const [name,shape] of zoneShapes)shape.setStyle(districtStyle(name));
+ el('selectedSummary').textContent=chosen.size?'Zonas seleccionadas: '+[...chosen].join(' + '):'Ninguna zona seleccionada';
+ updateLabels();
+}
 function refreshSelection(){render();syncZoneLabels()}
-async function fetchBoundary(z){
- const name=z[0];if(boundaryCache.has(name))return boundaryCache.get(name);
- const p=(async()=>{const q=name==='Guarulhos'?'Guarulhos, São Paulo, Brasil':name+', São Paulo, Brasil';
- const url='https://nominatim.openstreetmap.org/search?format=geojson&polygon_geojson=1&limit=10&addressdetails=1&q='+encodeURIComponent(q);
- const response=await fetch(url,{headers:{Accept:'application/json'}});if(!response.ok)throw Error('Servicio de límites no disponible');
- const json=await response.json();const polys=(json.features||[]).filter(f=>['Polygon','MultiPolygon'].includes(f.geometry?.type));
- const match=polys.find(f=>{const bbox=f.bbox||[];if(bbox.length!==4)return false;const lat=(bbox[1]+bbox[3])/2,lng=(bbox[0]+bbox[2])/2;return Math.abs(lat-z[1])<.14&&Math.abs(lng-z[2])<.14});
- if(!match)throw Error('No se encontró un contorno verificable');return match})();boundaryCache.set(name,p);p.catch(()=>boundaryCache.delete(name));return p;
+async function fetchGuarulhos(){
+ if(boundaryCache.has('Guarulhos'))return boundaryCache.get('Guarulhos');
+ const p=(async()=>{const url='https://nominatim.openstreetmap.org/search?format=geojson&polygon_geojson=1&limit=5&q='+encodeURIComponent('Guarulhos, São Paulo, Brasil');
+  const response=await fetch(url);if(!response.ok)throw Error('Servicio no disponible');
+  const geo=await response.json();const f=(geo.features||[]).find(x=>['Polygon','MultiPolygon'].includes(x.geometry?.type));
+  if(!f)throw Error('Sin límite municipal');return f;
+ })();
+ boundaryCache.set('Guarulhos',p);p.catch(()=>boundaryCache.delete('Guarulhos'));return p;
 }
 async function toggle(name){
- const z=zones.find(x=>x[0]===name);if(!z||!map)return;
- if(chosen.has(name)){chosen.delete(name);const shape=zoneShapes.get(name);if(shape){map.removeLayer(shape);zoneShapes.delete(name)}el('status').textContent='Zona desmarcada: '+name;refreshSelection();return}
- chosen.add(name);refreshSelection();el('status').textContent='Buscando límite geográfico real de '+name+'...';
- try{const geo=await fetchBoundary(z);if(!chosen.has(name))return;const shape=L.geoJSON(geo,{style:{color:'#080808',weight:4,opacity:1,fillColor:'#f7d31e',fillOpacity:.18},interactive:true}).addTo(map);shape.on('click',()=>toggle(name));zoneShapes.set(name,shape);const b=shape.getBounds();if(b.isValid())map.fitBounds(b.pad(.12),{maxZoom:12});el('status').textContent='Contorno real de '+name+' marcado.'}
- catch(err){if(!chosen.has(name))return;chosen.delete(name);refreshSelection();el('status').textContent='No hay límite verificado disponible para '+name+'. No se dibujó una división inventada.'}
+ if(!map||!zones.some(z=>z[0]===name))return;
+ if(chosen.has(name)){
+  chosen.delete(name);refreshSelection();
+  el('status').textContent=chosen.size?'Seleccionadas: '+[...chosen].join(' + '):'Tocá el nombre de un distrito para seleccionarlo.';
+  return;
+ }
+ chosen.add(name);refreshSelection();
+ if(name==='Guarulhos'&&!zoneShapes.has(name)){
+  el('status').textContent='Cargando el límite municipal de Guarulhos...';
+  try{const f=await fetchGuarulhos();const shape=L.geoJSON(f,{style:districtStyle(name)}).addTo(map);
+    shape.on('click',()=>toggle(name));zoneShapes.set(name,shape);syncZoneLabels();
+    el('status').textContent='Guarulhos seleccionado.'}
+  catch(e){el('status').textContent='Guarulhos seleccionado, pero no se pudo descargar su contorno.'}
+ }else{el('status').textContent='Zona seleccionada: '+name}
 }
-el('allBtn').onclick=()=>{onlyFavorites=false;el('allBtn').classList.add('active');el('favBtn').classList.remove('active');render()};el('favBtn').onclick=()=>{onlyFavorites=true;el('favBtn').classList.add('active');el('allBtn').classList.remove('active');render()};el('adContact').onclick=e=>{e.preventDefault();el('adMessage').textContent='El formulario para anunciantes todavía está en desarrollo. No hay registro ni cobros habilitados.'};el('allBtn').onclick=()=>{onlyFavorites=false;el('allBtn').classList.add('active');el('favBtn').classList.remove('active');render()};el('favBtn').onclick=()=>{onlyFavorites=true;el('favBtn').classList.add('active');el('allBtn').classList.remove('active');render()};el('clear').onclick=()=>{chosen.clear();for(const shape of zoneShapes.values())map.removeLayer(shape);zoneShapes.clear();layers.clear();map.setView(homeCenter,homeZoom);syncZoneLabels();el('status').textContent='Selección limpia';render()};['search','category','rating','order'].forEach(id=>el(id).addEventListener('input',render));render();if(typeof L!=='undefined'){map=L.map('map',{maxBounds:metroBounds,maxBoundsViscosity:1,minZoom:10,maxZoom:17}).setView(homeCenter,homeZoom);const tileOptions={maxZoom:17,attribution:'© OpenStreetMap contributors'};const styles={street:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenStreetMap contributors'}),terrain:L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenTopoMap contributors · © OpenStreetMap contributors'}),satellite:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery © Esri and contributors'})};baseLayer=styles.street.addTo(map);document.querySelectorAll('[data-mapstyle]').forEach(b=>b.onclick=()=>{map.removeLayer(baseLayer);baseLayer=styles[b.dataset.mapstyle].addTo(map);document.querySelectorAll('[data-mapstyle]').forEach(x=>x.classList.toggle('active',x===b))});zones.forEach(z=>{const marker=L.marker([z[1],z[2]],{icon:L.divIcon({className:'zone-label-wrap',html:'<span class="zone-name" role="button" aria-pressed="false">'+z[0]+'</span>',iconSize:[0,0],iconAnchor:[0,0]}),zIndexOffset:1000}).addTo(map);marker.on('click',()=>toggle(z[0]));zoneLabels.set(z[0],marker)});el('status').textContent='Tocá el nombre de una zona o su superficie para seleccionarla.'}else el('status').textContent='No se pudo cargar el mapa; los filtros siguen disponibles.';
+async function loadDistricts(){
+ try{
+  const response=await fetch('./distritos-sp.geojson',{cache:'force-cache'});if(!response.ok)throw Error('HTTP '+response.status);
+  const data=await response.json();if(!Array.isArray(data.features)||data.features.length<90)throw Error('Datos incompletos');
+  for(const f of data.features){
+   const name=f.properties?.distrito;if(!name||zoneShapes.has(name))continue;
+   const shape=L.geoJSON(f,{style:districtStyle(name)}).addTo(map);
+   const bounds=shape.getBounds();if(!bounds.isValid())continue;
+   shape.on('click',()=>toggle(name));zoneShapes.set(name,shape);
+   const point=bounds.getCenter();zones.push([name,point.lat,point.lng]);addZoneLabel(name,[point.lat,point.lng]);
+  }
+  el('status').textContent='Mapa listo: '+(zones.length-1)+' distritos de São Paulo y Guarulhos. Tocá los nombres.';
+  render();syncZoneLabels();
+ }catch(err){el('status').textContent='No se pudieron cargar los límites distritales. Actualizá la página para reintentar.'}
+}
+el('allBtn').onclick=()=>{onlyFavorites=false;el('allBtn').classList.add('active');el('favBtn').classList.remove('active');render()};el('favBtn').onclick=()=>{onlyFavorites=true;el('favBtn').classList.add('active');el('allBtn').classList.remove('active');render()};el('adContact').onclick=e=>{e.preventDefault();el('adMessage').textContent='El formulario para anunciantes todavía está en desarrollo. No hay registro ni cobros habilitados.'};el('allBtn').onclick=()=>{onlyFavorites=false;el('allBtn').classList.add('active');el('favBtn').classList.remove('active');render()};el('favBtn').onclick=()=>{onlyFavorites=true;el('favBtn').classList.add('active');el('allBtn').classList.remove('active');render()};el('clear').onclick=()=>{chosen.clear();map.setView(homeCenter,homeZoom);el('status').textContent='Selección limpia';refreshSelection()};['search','category','rating','order'].forEach(id=>el(id).addEventListener('input',render));render();if(typeof L!=='undefined'){
+ map=L.map('map',{maxBounds:metroBounds,maxBoundsViscosity:1,minZoom:10,maxZoom:17,preferCanvas:true}).setView(homeCenter,homeZoom);
+ const styles={
+ street:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenStreetMap contributors'}),
+ terrain:L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenTopoMap · © OpenStreetMap'}),
+ satellite:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:17,attribution:'Imagery © Esri and contributors'})
+ };
+ baseLayer=styles.street.addTo(map);
+ map.attributionControl.addAttribution('Distritos: © OpenStreetMap (simplificados)');
+ document.querySelectorAll('[data-mapstyle]').forEach(b=>b.onclick=()=>{map.removeLayer(baseLayer);baseLayer=styles[b.dataset.mapstyle].addTo(map);document.querySelectorAll('[data-mapstyle]').forEach(x=>x.classList.toggle('active',x===b))});
+ addZoneLabel('Guarulhos',[-23.454,-46.533]);
+ map.on('zoomend moveend resize',updateLabels);
+ el('status').textContent='Cargando distritos reales de São Paulo...';
+ loadDistricts();
+}else el('status').textContent='No se pudo cargar Leaflet; verificá la conexión a Internet.';
 </script></html>
