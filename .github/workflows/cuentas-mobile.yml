@@ -6,6 +6,7 @@ on:
       - '.github/workflows/cuentas-mobile.yml'
       - 'auth.js'
       - 'i18n.js'
+      - 'scripts/test-i18n.cjs'
       - 'auth-config.js'
       - 'supabase/schema.sql'
       - 'index.html'
@@ -26,6 +27,7 @@ jobs:
         run: |
           node --check auth.js
           node --check i18n.js
+          node scripts/test-i18n.cjs
           node --check auth-config.js
           node --check catalogo.js
           node --check scripts/preparar-mobile.mjs
