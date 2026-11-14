@@ -154,13 +154,13 @@
       const maps=FomeBoaGoogleMaps.resolve(v);
       const url=maps.href?safeURL(maps.href):'';
       const mapLink=url
-        ?'<a class="compact-google" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(maps.note)+'">'+(maps.kind==='verified'?'★ Ver puntuación en Google Maps':'★ Buscar puntuación en Google Maps')+' ↗</a>'
+        ?'<a class="compact-google" data-verified="'+String(maps.kind==='verified')+'" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(maps.note)+'">'+(maps.kind==='verified'?'★ Ver puntuación en Google Maps':'★ Buscar puntuación en Google Maps')+' ↗</a>'
         :'<span class="compact-no-map">Ubicación sin verificar</span>';
       const alternative=maps.kind==='search'&&v.address?FomeBoaGoogleMaps.resolve(v,{nameOnly:true}):null;
       const alternativeLink=alternative&&alternative.href?safeURL(alternative.href):'';
       const saved=favorites.has(v.id);
       const address=String(v.address||'Dirección sin registrar');
-      return '<article class="card compact-card">'
+      return '<article class="card compact-card" data-type="'+esc(v.type)+'">'
         +'<div class="compact-top"><p class="tag">'+esc(v.typeLabel)+' · '+esc((v.zones||[]).join(' + '))+'</p><button type="button" class="catalog-fav compact-fav" data-id="'+esc(v.id)+'" aria-label="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'" aria-pressed="'+String(saved)+'" title="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'">'+(saved?'♥':'♡')+'</button></div>'
         + '<h3 title="'+esc(v.name)+'"><span class="venue-kind-icon" aria-hidden="true">'+({'restaurant':'🍽️','cafe':'☕','bar':'🍸','bakery':'🥖','pastry':'🍰','pub':'🍺','fast_food':'🍔','food_court':'🍽️','ice_cream':'🍦','biergarten':'🍻','confectionery':'🍰','coffee':'☕','deli':'🥪'}[v.type]||'🍴')+'</span>'+esc(v.name)+'</h3>' + FomeBoaGluten.badge(v)
         +'<p class="compact-address" title="'+esc(address)+'">'+esc(address)+'</p>'
@@ -188,6 +188,7 @@
     $('catalogAll').disabled=busyAll||!manifest;
     $('catalogInfo').textContent=message||(manifest?manifest.total+' locales guardados en el \u00e1rea urbana. Fuentes: OpenStreetMap, Overture Maps y fichas revisadas. Actualizaci\u00f3n: '+new Date(manifest.generatedAt).toLocaleDateString('es-ES')+'. No representa todos los negocios de Google Maps.':'Consultando el cat\u00e1logo compartido...');
     draftText();
+    window.FomeBoaI18n?.translate?.();
   };
   $('catalogAll').onclick=async()=>{
     busyAll=true;message='Abriendo el cat\u00e1logo guardado...';render();
