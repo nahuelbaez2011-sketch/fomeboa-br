@@ -130,11 +130,29 @@
     const rows=FomeBoaCatalogQuality.filter(allRows||[]).filter(v=>(!onlyFavorites||favorites.has(v.id))&&(!type||type===v.type)&&(!q||fold([v.name,v.typeLabel,v.address,v.cuisine,...v.zones].join(' ')).includes(q)));
     return rows.sort((a,b)=>order==='type'?a.typeLabel.localeCompare(b.typeLabel,'pt-BR')||a.name.localeCompare(b.name,'pt-BR'):a.name.localeCompare(b.name,'pt-BR'));
   };
+  function closureReportLink(venue){
+    const details=[
+      'Solicitud de revisión de un establecimiento en FomeBoa SP.',
+      '',
+      'Nombre: '+String(venue.name||''),
+      'Dirección registrada: '+String(venue.address||''),
+      'Zona: '+(venue.zones||[]).join(', '),
+      'ID de catálogo: '+String(venue.id||''),
+      '',
+      'Qué ocurrió: [cerrado permanentemente / trasladado / dirección incorrecta / otro]',
+      'Enlace de Google Maps o evidencia reciente: [pegá aquí el enlace]',
+      'Fecha aproximada de la observación: [día/mes/año]',
+      '',
+      'No quitar sin revisión individual; otros locales con nombres iguales podrían seguir abiertos.'
+    ];
+    const qs=new URLSearchParams({title:'Revisar estado de local: '+String(venue.name||''),body:details.join('\n')});
+    return '<a class="catalog-report" target="_blank" rel="noopener noreferrer" href="https://github.com/nahuelbaez2011-sketch/fomeboa-br/issues/new?'+qs.toString().replace(/&/g,'&amp;')+'" title="Informar un posible cierre o un error de ubicación. Necesita revisión antes de retirar la ficha.">Reportar cierre o error</a>';
+  }
   function cards(rows){
     el('cards').innerHTML=rows.slice(0,visibleLimit).map(v=>{
 
       const source=safeURL(v.sourceUrl||(v.osmType?'https://www.openstreetmap.org/'+v.osmType+'/'+v.osmId:''));
-      return '<article class="card"><p class="tag">'+esc(v.typeLabel)+' \u00b7 '+esc(v.zones.join(' + '))+'</p><h3>'+esc(v.name)+'</h3><p class="muted">'+esc(v.address||'Direcci\u00f3n no registrada')+'</p>'+(v.cuisine?'<p class="muted">'+esc(v.cuisine)+'</p>':'')+'<p class="catalog-source">Fuente: '+esc(v.source||'OpenStreetMap')+'. Sin calificaci\u00f3n verificada; confirm\u00e1 horarios y apertura con el local.</p><div class="venue-actions"><button class="catalog-fav" data-id="'+esc(v.id)+'">'+(favorites.has(v.id)?'Guardado':'Guardar')+'</button>'+FomeBoaGoogleMaps.linkHTML(v)+''+(source?'<a target="_blank" rel="noopener noreferrer" href="'+esc(source)+'">Ver fuente</a>':'')+'</div></article>';
+      return '<article class="card"><p class="tag">'+esc(v.typeLabel)+' \u00b7 '+esc(v.zones.join(' + '))+'</p><h3>'+esc(v.name)+'</h3><p class="muted">'+esc(v.address||'Direcci\u00f3n no registrada')+'</p>'+(v.cuisine?'<p class="muted">'+esc(v.cuisine)+'</p>':'')+'<p class="catalog-source">Fuente: '+esc(v.source||'OpenStreetMap')+'. Sin calificaci\u00f3n verificada; confirm\u00e1 horarios y apertura con el local.</p><div class="venue-actions"><button class="catalog-fav" data-id="'+esc(v.id)+'">'+(favorites.has(v.id)?'Guardado':'Guardar')+'</button>'+FomeBoaGoogleMaps.linkHTML(v)+''+(source?'<a target="_blank" rel="noopener noreferrer" href="'+esc(source)+'">Ver fuente</a>':'')+closureReportLink(v)+'</div></article>';
     }).join('');
     document.querySelectorAll('.catalog-fav').forEach(b=>b.onclick=()=>{const id=b.dataset.id;if(favorites.has(id))favorites.delete(id);else favorites.add(id);try{localStorage.setItem('fomeboa-favorites',JSON.stringify([...favorites]))}catch(_){}render()});
   }
