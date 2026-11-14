@@ -6,7 +6,7 @@
 - Backend elegido: Supabase Auth y PostgreSQL con Row Level Security (RLS).
 - Las cuentas **no están habilitadas todavía**: `auth-config.js` tiene URL y clave pública vacías hasta que se conecte un proyecto administrado por el propietario.
 - No se guardan contraseñas en GitHub Pages ni en archivos de la web.
-- El visitante puede consultar el catálogo sin cuenta.
+- **Decisión actual**: para entrar a la interfaz de FomeBoa se requerirá una sesión registrada y verificada en Supabase. El bloqueo visual se activa automáticamente al configurar un proyecto real; mientras las credenciales públicas sigan vacías, la web permanece accesible para desarrollo y pruebas.
 - Los 48.934 registros gastronómicos y sus favoritos locales preexistentes no se convierten automáticamente en cuentas.
 - Los proyectos nativos Android/iOS aún deben generarse, probarse, firmarse y publicarse.
 
@@ -57,3 +57,15 @@ Referencias oficiales:
 - https://supabase.com/docs/guides/database/postgres/row-level-security
 - https://capacitorjs.com/docs/getting-started
 - https://developer.apple.com/app-store/review/guidelines/
+
+## Idiomas de la interfaz
+
+El selector ubicado junto a «Explorá São Paulo» permite alternar **Español, Português y English**. La preferencia se guarda localmente, también en la pantalla de acceso. Los nombres comerciales y los nombres propios de los distritos no se traducen.
+
+## Registro obligatorio y métricas para anunciantes
+
+- Una vez conectado y activado Supabase, la entrada normal a la interfaz exige un usuario con sesión autenticada, validada mediante `auth.getUser()`; no aceptar solamente sesiones almacenadas en el navegador.
+- **Cuidado: GitHub Pages es alojamiento estático.** El bloqueo de interfaz no puede convertir archivos estáticos públicos en datos privados; para una restricción de acceso completa, mover la obtención de datos y las acciones privadas a un backend autenticado con RLS.
+- Para justificar alcance ante anunciantes, distinguir **cuentas registradas**, **usuarios activos mensuales**, **visitas** y **búsquedas por zona**. La cifra de cuentas por sí sola no acredita uso activo ni conversiones. Usar métricas agregadas y privacidad desde el diseño, sin compartir correos personales.
+- Antes de publicar iOS, comprobar el requisito de Apple de permitir acceso sin inicio de sesión si las funciones centrales no dependen realmente de la cuenta, y ofrecer eliminación de cuenta dentro de la aplicación. Véase https://developer.apple.com/app-store/review/guidelines/ sección 5.1.1(v).
+- El conector de Supabase no devolvió proyectos existentes al consultar en noviembre de 2026. Crear uno requiere elegir explícitamente organización y aceptar cualquier coste que corresponda; no fue creado automáticamente.
