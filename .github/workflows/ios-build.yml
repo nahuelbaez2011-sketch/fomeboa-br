@@ -9,6 +9,12 @@ on:
       - 'capacitor.config.json'
       - 'scripts/preparar-mobile.mjs'
       - 'scripts/crear-icono-ios.swift'
+      - 'index.html'
+      - 'catalogo.js'
+      - 'catalogo-quality.js'
+      - 'google-maps-links.js'
+      - 'gluten-info.js'
+      - 'i18n.js'
 permissions:
   contents: read
 concurrency:
