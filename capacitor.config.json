@@ -1,0 +1,10 @@
+{
+  "appId": "com.fomeboa.sp",
+  "appName": "FomeBoa SP",
+  "webDir": "www",
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}
