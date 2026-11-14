@@ -150,11 +150,35 @@
   }
   function cards(rows){
     el('cards').innerHTML=rows.slice(0,visibleLimit).map(v=>{
-
       const source=safeURL(v.sourceUrl||(v.osmType?'https://www.openstreetmap.org/'+v.osmType+'/'+v.osmId:''));
-      return '<article class="card"><p class="tag">'+esc(v.typeLabel)+' \u00b7 '+esc(v.zones.join(' + '))+'</p><h3>'+esc(v.name)+'</h3><p class="muted">'+esc(v.address||'Direcci\u00f3n no registrada')+'</p>'+(v.cuisine?'<p class="muted">'+esc(v.cuisine)+'</p>':'')+'<p class="catalog-source">Fuente: '+esc(v.source||'OpenStreetMap')+'. Sin calificaci\u00f3n verificada; confirm\u00e1 horarios y apertura con el local.</p><div class="venue-actions"><button class="catalog-fav" data-id="'+esc(v.id)+'">'+(favorites.has(v.id)?'Guardado':'Guardar')+'</button>'+FomeBoaGoogleMaps.linkHTML(v)+''+(source?'<a target="_blank" rel="noopener noreferrer" href="'+esc(source)+'">Ver fuente</a>':'')+closureReportLink(v)+'</div></article>';
+      const maps=FomeBoaGoogleMaps.resolve(v);
+      const url=maps.href?safeURL(maps.href):'';
+      const mapLink=url
+        ?'<a class="compact-google" href="'+esc(url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(maps.note)+'">'+(maps.kind==='verified'?'Ver ficha en Maps':'Buscar en Google Maps')+' ↗</a>'
+        :'<span class="compact-no-map">Ubicación sin verificar</span>';
+      const alternative=maps.kind==='search'&&v.address?FomeBoaGoogleMaps.resolve(v,{nameOnly:true}):null;
+      const alternativeLink=alternative&&alternative.href?safeURL(alternative.href):'';
+      const saved=favorites.has(v.id);
+      const address=String(v.address||'Dirección sin registrar');
+      return '<article class="card compact-card">'
+        +'<div class="compact-top"><p class="tag">'+esc(v.typeLabel)+' · '+esc((v.zones||[]).join(' + '))+'</p><button type="button" class="catalog-fav compact-fav" data-id="'+esc(v.id)+'" aria-label="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'" aria-pressed="'+String(saved)+'" title="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'">'+(saved?'♥':'♡')+'</button></div>'
+        +'<h3 title="'+esc(v.name)+'">'+esc(v.name)+'</h3>'
+        +'<p class="compact-address" title="'+esc(address)+'">'+esc(address)+'</p>'
+        +'<div class="compact-actions">'+mapLink+'</div>'
+        +'<details class="compact-details"><summary>Más información</summary><div class="compact-extra">'
+        +(v.cuisine?'<p>'+esc(v.cuisine)+'</p>':'')
+        +'<p>Fuente: '+esc(v.source||'OpenStreetMap')+'. Estado de apertura no verificado.</p>'
+        +(alternativeLink?'<a target="_blank" rel="noopener noreferrer" href="'+esc(alternativeLink)+'">Buscar solo por nombre en Google Maps</a>':'')
+        +(source?'<a target="_blank" rel="noopener noreferrer" href="'+esc(source)+'">Ver fuente</a>':'')
+        +closureReportLink(v)
+        +'</div></details></article>';
     }).join('');
-    document.querySelectorAll('.catalog-fav').forEach(b=>b.onclick=()=>{const id=b.dataset.id;if(favorites.has(id))favorites.delete(id);else favorites.add(id);try{localStorage.setItem('fomeboa-favorites',JSON.stringify([...favorites]))}catch(_){}render()});
+    document.querySelectorAll('.catalog-fav').forEach(b=>b.onclick=()=>{
+      const id=b.dataset.id;
+      if(favorites.has(id))favorites.delete(id);else favorites.add(id);
+      try{localStorage.setItem('fomeboa-favorites',JSON.stringify([...favorites]))}catch(_){}
+      render();
+    });
   }
   render=function(){
     if(chosen.size)showAll=false;
