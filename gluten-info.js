@@ -19,7 +19,7 @@
  }
  function badge(venue){
   const info=classify(venue);if(!info)return '';
-  const icon=info.type==='verified'?'✓':'🍽️';
+  const icon=info.type==='verified'?'✓':'🚫🌾';
   return '<a class="gluten-mark gluten-mark-'+info.type+'" href="'+htmlEscape(info.source)+'" target="_blank" rel="noopener noreferrer" aria-label="'+htmlEscape(info.label+'. '+info.note)+'" title="'+htmlEscape(info.note)+'"><span aria-hidden="true">'+icon+'</span><span>'+htmlEscape(info.label)+(info.type==='reported'?' · declarado':'')+'</span></a>';
  }
  function detail(venue){
