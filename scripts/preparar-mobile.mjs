@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const web=path.join(root,'www');
-const files=['index.html','catalogo.js','catalogo-quality.js','google-maps-links.js','gluten-info.js','auth.js','auth-config.js','i18n.js','community.js','support.js','extras.js','community-locale.js','community.css','distritos-sp.geojson'];
+const files=['index.html','catalogo.js','catalogo-quality.js','google-maps-links.js','gluten-info.js','auth.js','auth-config.js','i18n.js','community.js','admin.js','support.js','extras.js','community-locale.js','community.css','distritos-sp.geojson'];
 fs.rmSync(web,{recursive:true,force:true});
 fs.mkdirSync(web,{recursive:true});
 for(const file of files){
