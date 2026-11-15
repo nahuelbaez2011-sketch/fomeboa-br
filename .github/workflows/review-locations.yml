@@ -1,0 +1,66 @@
+name: Revisar ubicaciones y cierres documentados
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/review-locations.yml'
+      - 'scripts/reconcile-locations.cjs'
+      - 'catalogo/revisiones-ubicaciones.json'
+permissions:
+  contents: write
+concurrency:
+  group: fomeboa-location-review
+  cancel-in-progress: false
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Read current catalog
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+      - name: Audit all records and apply exact-branch corrections
+        run: |
+          node --check scripts/reconcile-locations.cjs
+          node scripts/reconcile-locations.cjs
+          node scripts/test-i18n.cjs
+          node - <<'JS'
+          const fs=require('node:fs'); const assert=require('node:assert/strict');
+          const r=JSON.parse(fs.readFileSync('catalogo/auditoria-ubicaciones.json','utf8'));
+          const m=JSON.parse(fs.readFileSync('catalogo/manifest.json','utf8'));
+          const a=JSON.parse(fs.readFileSync('catalogo/cuarentena-ubicaciones.json','utf8'));
+          const v=JSON.parse(fs.readFileSync('catalogo/todos.json','utf8'));
+          assert.equal(v.length,m.total); assert.equal(v.length,r.publicRecords);
+          assert.equal(r.inputRecords,v.length+a.length);
+          assert.equal(r.googleMapsListingsVerified,0);
+          assert.equal(r.googleMapsClosedStatusesRead,0);
+          assert(Object.values(r.checks).every(Boolean));
+          assert(!v.some(x=>x.unnamed));
+          console.log('PASS: reviewed rows accounted for, original data preserved, no unsupported Google claims');
+          JS
+      - name: Save reviewed data and UI
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add catalogo/todos.json catalogo/zonas catalogo/manifest.json catalogo/control-calidad.json catalogo/cuarentena-ubicaciones.json catalogo/duplicados-ubicacion.json catalogo/auditoria-ubicaciones-detalle.json catalogo/auditoria-ubicaciones.json catalogo-quality.js catalogo.js index.html i18n.js scripts/test-i18n.cjs
+          if ! git diff --cached --quiet; then
+            git commit -m 'Apply documented branch closures, preserve relocated venues and flag unverified locations'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Publish updated site
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST repos/${{ github.repository }}/pages/builds
+      - name: Attach audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: FomeBoa-auditoria-ubicaciones
+          path: |
+            catalogo/auditoria-ubicaciones.json
+            catalogo/revisiones-ubicaciones.json
+            catalogo/duplicados-ubicacion.json
+          retention-days: 14
