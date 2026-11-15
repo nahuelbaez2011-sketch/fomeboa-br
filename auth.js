@@ -69,6 +69,8 @@
     const enabled=!!client;
     byId('fomeboaNotReady').hidden=enabled;
     byId('fomeboaAuthForm').hidden=!enabled||!!user||mode==='change';
+    dlg.classList.toggle('is-profile',!!user&&mode!=='change');
+    byId('fomeboaGoogleStatus').hidden=!enabled||!!user||mode==='change';
     byId('fomeboaGoogleSignIn').hidden=!enabled||!!user||mode==='change';
     byId('fomeboaEmailSeparator').hidden=!enabled||!!user||mode==='change';
     const canGoogle=enabled&&googleReady!==false;
@@ -89,14 +91,16 @@
     window.FomeBoaI18n?.localizeAuth?.();
     if(!enabled)notice(window.FomeBoaI18n?.t?.('authReady')||'El registro real se habilitará cuando conectemos Supabase.');
   }
-  function open(){mode=user?'profile':'signup';notice('');render();dlg.showModal()}
+  function open(){mode=user?'profile':'signup';notice('');render();if(!dlg.open)dlg.showModal();if(user)window.dispatchEvent(new CustomEvent('fomeboa:profile-open'));}
   trigger.onclick=open;
   byId('fomeboaClose').onclick=()=>dlg.close();
   document.querySelectorAll('#fomeboaAuthModes [data-auth-mode]').forEach(x=>x.onclick=()=>{mode=x.dataset.authMode;notice('');render()});
   function setUser(next){
+    const previousId=user?.id||null;
     user=next||null;
     if(user)byId('fomeboaWelcome').textContent='Hola, '+String(user.user_metadata?.display_name||user.user_metadata?.full_name||user.user_metadata?.name||'Explorador').slice(0,40)+'.';
     mode=user?'profile':'login';render();
+    if(previousId!==(user?.id||null))window.dispatchEvent(new CustomEvent('fomeboa:auth',{detail:{userId:user?.id||null}}));
   }
   async function loadProfile(){
     if(!client||!user)return;
@@ -215,16 +219,16 @@
       return;
     }
     if(event==='PASSWORD_RECOVERY'){
-      queueMicrotask(async()=>{await verifyUser(session?.user?.id);if(user){mode='change';render();dlg.showModal();notice(window.FomeBoaI18n?.t?.('authMsgPasswordNew')||'Ingresá una contraseña nueva.');}});
+      setTimeout(async()=>{await verifyUser(session?.user?.id);if(user){mode='change';render();if(!dlg.open)dlg.showModal();notice(window.FomeBoaI18n?.t?.('authMsgPasswordNew')||'Ingresá una contraseña nueva.');}},0);
       return;
     }
     if(['INITIAL_SESSION','SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(event)){
       if(!session?.user){validationToken++;setUser(null);return;}
-      queueMicrotask(()=>verifyUser(session.user.id));
+      setTimeout(()=>verifyUser(session.user.id),0);
     }
   });
   render();
   if(client)queueMicrotask(checkGoogleProvider);
-  window.FomeBoaAuth=Object.freeze({enabled:!!client,open,isSignedIn:()=>!!user,refresh:()=>{render();window.FomeBoaI18n?.localizeAuth?.();}});
+  window.FomeBoaAuth=Object.freeze({enabled:!!client,open,isSignedIn:()=>!!user,identity:()=>user?({id:user.id}):null,getClient:()=>user?client:null,refresh:()=>{render();window.FomeBoaI18n?.localizeAuth?.();}});
 
 })();

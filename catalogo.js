@@ -165,7 +165,7 @@
       const alternativeLink=alternative&&alternative.href?safeURL(alternative.href):'';
       const saved=favorites.has(v.id);
       const address=String(v.address||'Dirección sin registrar');
-      return '<article class="card compact-card" data-type="'+esc(v.type)+'">'
+      return '<article class="card compact-card" data-venue-id="'+esc(v.id)+'" data-type="'+esc(v.type)+'">'
         +'<div class="compact-top"><h3 title="'+esc(v.name)+'"><span class="venue-kind-icon venue-initial" aria-hidden="true">'+esc(venueInitials[v.type]||'G')+'</span><span class="venue-name">'+esc(v.name)+'</span></h3><button type="button" class="catalog-fav compact-fav" data-id="'+esc(v.id)+'" aria-label="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'" aria-pressed="'+String(saved)+'" title="'+(saved?'Quitar de favoritos':'Guardar en favoritos')+'">'+(saved?'♥':'♡')+'</button></div>'
         +'<p class="tag compact-subtitle">'+esc(v.typeLabel)+' · '+esc((v.zones||[]).join(' + '))+'</p>'
         +FomeBoaGluten.badge(v)
@@ -182,6 +182,7 @@
     }).join('');
     document.querySelectorAll('.catalog-fav').forEach(b=>b.onclick=()=>{
       const id=b.dataset.id;
+      if(window.FomeBoaCommunity){window.FomeBoaCommunity.toggleFavorite(rows.find(v=>v.id===id));return;}
       if(favorites.has(id))favorites.delete(id);else favorites.add(id);
       try{localStorage.setItem('fomeboa-favorites',JSON.stringify([...favorites]))}catch(_){}
       render();
@@ -196,6 +197,7 @@
     $('catalogInfo').textContent=message||(manifest?manifest.total+' locales guardados en el \u00e1rea urbana. Fuentes: OpenStreetMap, Overture Maps y fichas revisadas. Actualizaci\u00f3n: '+new Date(manifest.generatedAt).toLocaleDateString('es-ES')+'. No representa todos los negocios de Google Maps.':'Consultando el cat\u00e1logo compartido...');
     draftText();
     window.FomeBoaI18n?.translate?.();
+    window.FomeBoaCommunity?.decorate?.(rows.slice(0,visibleLimit));
   };
   $('catalogAll').onclick=async()=>{
     busyAll=true;message='Abriendo el cat\u00e1logo guardado...';render();

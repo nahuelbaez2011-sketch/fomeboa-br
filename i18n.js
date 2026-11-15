@@ -7,7 +7,7 @@ let lang='es';try{const value=localStorage.getItem('fomeboa-language');if(suppor
 const L=k=>D[k]?.[supported.indexOf(lang)]||k;
 const id=s=>document.getElementById(s), q=s=>document.querySelector(s), qa=s=>[...document.querySelectorAll(s)];
 function put(n,v){if(n&&v!==undefined&&n.textContent!==v)n.textContent=v}
-function setLang(value){if(!supported.includes(value))return;lang=value;try{localStorage.setItem('fomeboa-language',value)}catch(_){}translate();root.FomeBoaAuth?.refresh?.();}
+function setLang(value){if(!supported.includes(value))return;lang=value;try{localStorage.setItem('fomeboa-language',value)}catch(_){}translate();root.FomeBoaAuth?.refresh?.();root.dispatchEvent?.(new CustomEvent('fomeboa:language'));}
 function setText(sel,key){put(q(sel),L(key))}
 function cats(type,singular=false){return L((singular?'sing_':'kind_')+type)}
 function translate(){
