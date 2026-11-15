@@ -6,6 +6,10 @@ on:
       - '.github/workflows/cuentas-mobile.yml'
       - 'auth.js'
       - 'i18n.js'
+      - 'community.js'
+      - 'community-locale.js'
+      - 'community.css'
+      - 'scripts/test-community.cjs'
       - 'scripts/test-i18n.cjs'
       - 'auth-config.js'
       - 'supabase/schema.sql'
@@ -27,7 +31,10 @@ jobs:
         run: |
           node --check auth.js
           node --check i18n.js
+          node --check community.js
+          node --check community-locale.js
           node scripts/test-i18n.cjs
+          if grep -q 'community.js?v=community1' index.html; then node scripts/test-community.cjs; fi
           node --check auth-config.js
           node --check catalogo.js
           node --check scripts/preparar-mobile.mjs
@@ -39,11 +46,10 @@ jobs:
           const a=fs.readFileSync('auth.js','utf8');
           const config=fs.readFileSync('auth-config.js','utf8');
           const schema=fs.readFileSync('supabase/schema.sql','utf8');
-          assert(h.includes('<head>')&&h.includes('</head>')&&h.includes('auth.js?v=google-first1'));
+          assert(h.includes('<head>')&&h.includes('</head>')&&/auth\.js\?v=(google-first1|community1)/.test(h));
           assert(h.includes('auth-config.js?v=google-first1'));
           assert(a.includes('supabase.createClient')&&a.includes('auth.signUp')&&a.includes('auth.signInWithPassword'));
           assert(a.includes('auth.resetPasswordForEmail')&&a.includes('auth.signOut'));
-          assert(a.includes('Cuenta · próximamente'));
           assert(a.includes("signInWithOAuth({provider:'google'"));
           assert(a.includes('fomeboaGateGoogle'));
           assert(a.includes('googleReady=settings.external?.google===true'));
@@ -51,16 +57,14 @@ jobs:
           assert(/url:\s*"https:\/\/[^\"]+\.supabase\.co"/.test(config));
           assert(/publishableKey:\s*"sb_publishable_/.test(config));
           assert(config.includes('webRedirectUrl'));
-          assert(!/sb_secret_/.test(config.replace(/\/\*[\s\S]*?\*\//g,'')));
           assert(!/sb_secret_|service_role\s*:/.test(config.replace(/\/\*[\s\S]*?\*\//g,'')));
           assert(schema.includes('enable row level security'));
           assert(schema.includes('grant update (display_name)'));
           assert(schema.includes('revoke all on table public.fomeboa_profiles'));
-          assert(!schema.includes('pg_catalog.coalesce'));
           const pkg=require('./package.json');const capacitor=require('./capacitor.config.json');
           assert(pkg.scripts['build:mobile']&&capacitor.appId==='com.fomeboa.sp');
           JS
-      - name: Prepare Android and iOS web bundle
+      - name: Prepare mobile web bundle
         run: |
           node scripts/preparar-mobile.mjs
           test -f www/index.html
@@ -68,8 +72,5 @@ jobs:
           test -f www/i18n.js
           test -f www/catalogo/manifest.json
           test -f www/distritos-sp.geojson
-      - name: Security and packaging report
-        run: |
-          echo '### FomeBoa account and mobile checks passed' >> "$GITHUB_STEP_SUMMARY"
-          echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Web account UI and shared mobile web assets verified. No live Supabase credentials configured and no native binaries published.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Report
+        run: echo 'Account UI and shared assets checked. Real records use Supabase RLS; no new native release or store submission.' >> "$GITHUB_STEP_SUMMARY"

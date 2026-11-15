@@ -1,0 +1,26 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root={FomeBoaI18n:{lang:'es'}};vm.runInNewContext(fs.readFileSync('community-locale.js','utf8'),{window:root});
+for(const lang of ['es','pt','en']){root.FomeBoaI18n.lang=lang;const b=root.FomeBoaCommunityText.badges();assert.equal(b.length,9);assert.equal(new Set(b.map(x=>x.code)).size,9);assert.equal(b.find(x=>x.code==='coffee_lover').target,5);assert.equal(b.find(x=>x.code==='district_explorer').target,3);assert(root.FomeBoaCommunityText.t('privacy').length>40);assert(root.FomeBoaCommunityText.level(1));}
+const js=fs.readFileSync('community.js','utf8'),css=fs.readFileSync('community.css','utf8'),auth=fs.readFileSync('auth.js','utf8'),html=fs.readFileSync('index.html','utf8'),catalog=fs.readFileSync('catalogo.js','utf8');
+new vm.Script(js);new vm.Script(auth);
+assert(css.includes('[hidden]{display:none!important}'));
+assert(css.includes('font-size:12px!important'));
+assert(auth.includes("byId('fomeboaGoogleStatus').hidden=!enabled||!!user"));
+assert(auth.includes('fomeboa:profile-open'));
+assert(auth.includes('identity:()=>user?({id:user.id}):null'));
+assert(js.includes("c.rpc('fomeboa_my_progress')"));
+assert(js.includes("rpc('fomeboa_save_review'"));
+assert(js.includes("c.functions.invoke('fomeboa-venue'"));
+assert(js.includes("from('fomeboa_favorites')"));
+assert(js.includes("from('fomeboa_reports')"));
+assert(js.includes('epoch++'));
+assert(js.includes(".eq('user_id',me.id)"));
+assert(!js.includes('sb_secret_'));
+assert(!js.includes('.update({xp'));
+assert(html.includes('community.css?v=community1'));
+assert(html.includes('community-locale.js?v=community1'));
+assert(html.includes('community.js?v=community1'));
+assert(catalog.includes('data-venue-id='));
+assert(catalog.includes('FomeBoaCommunity?.decorate'));
+console.log('PASS: badges in 3 languages, hidden login controls, account-backed history/favorites/reports and server reward wiring');

@@ -1,0 +1,47 @@
+name: Activar perfil y comunidad FomeBoa
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/community-v1.yml'
+      - 'scripts/activate-community.py'
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: fomeboa-community-activation
+  cancel-in-progress: false
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+      - name: Integrar perfil sin cambiar el catalogo
+        run: python3 scripts/activate-community.py
+      - name: Verificar interfaz e idiomas
+        run: |
+          node --check community.js
+          node --check community-locale.js
+          node --check auth.js
+          node --check catalogo.js
+          node scripts/test-i18n.cjs
+          node scripts/test-community.cjs
+          node scripts/preparar-mobile.mjs
+      - name: Publicar archivos integrados
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add auth.js catalogo.js i18n.js index.html scripts/preparar-mobile.mjs scripts/test-i18n.cjs
+          if ! git diff --cached --quiet; then
+            git commit -m 'Activate account history, server-earned badges and real FomeBoa ratings'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Publicar sitio
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST repos/${{ github.repository }}/pages/builds
