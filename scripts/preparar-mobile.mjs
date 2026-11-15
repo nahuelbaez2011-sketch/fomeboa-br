@@ -14,6 +14,6 @@ for(const file of files){
 }
 fs.cpSync(path.join(root,'catalogo'),path.join(web,'catalogo'),{recursive:true});
 const html=fs.readFileSync(path.join(web,'index.html'),'utf8');
-if(!html.includes('<head>')||!html.includes('</head>')||!html.includes('auth.js?v=2'))throw new Error('Mobile web bundle missing required HTML/head/auth');
+if(!html.includes('<head>')||!html.includes('</head>')||!html.includes('auth.js?v=google-first1'))throw new Error('Mobile web bundle missing required HTML/head/auth');
 if(!fs.existsSync(path.join(web,'catalogo','manifest.json')))throw new Error('Shared catalog missing');
 console.log('Prepared FomeBoa SP mobile web bundle in www/. Native platforms can now be synced.');
