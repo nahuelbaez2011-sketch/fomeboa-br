@@ -40,10 +40,14 @@ jobs:
           const config=fs.readFileSync('auth-config.js','utf8');
           const schema=fs.readFileSync('supabase/schema.sql','utf8');
           assert(h.includes('<head>')&&h.includes('</head>')&&h.includes('auth.js?v=google-first1'));
-          assert(h.includes('auth-config.js?v=1'));
+          assert(h.includes('auth-config.js?v=google-first1'));
           assert(a.includes('supabase.createClient')&&a.includes('auth.signUp')&&a.includes('auth.signInWithPassword'));
           assert(a.includes('auth.resetPasswordForEmail')&&a.includes('auth.signOut'));
           assert(a.includes('Cuenta · próximamente'));
+          assert(a.includes("signInWithOAuth({provider:'google'"));
+          assert(a.includes('fomeboaGateGoogle'));
+          assert(a.includes('googleReady=settings.external?.google===true'));
+          assert(a.includes('redirectUrl'));
           assert(/url:\s*"https:\/\/[^\"]+\.supabase\.co"/.test(config));
           assert(/publishableKey:\s*"sb_publishable_/.test(config));
           assert(config.includes('webRedirectUrl'));
