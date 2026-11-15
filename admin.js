@@ -15,7 +15,7 @@ document.head.appendChild(css);
 const launch=document.createElement('button');launch.id='fbAdminOpen';launch.type='button';launch.hidden=true;
 const dialog=document.createElement('dialog');dialog.id='fbAdminDialog';
 dialog.innerHTML='<header><h2 id="fbAdminTitle"></h2><button type="button" id="fbAdminClose"></button></header><div id="fbAdminBody"><nav id="fbAdminTabs"></nav><p id="fbAdminMessage" role="status"></p><section id="fbAdminItems"></section></div>';
-document.body.append(launch,dialog);
+(document.querySelector('header .nav')||document.body).appendChild(launch);document.body.appendChild(dialog);
 const dataSets=[
  {key:'support',table:'fomeboa_support_tickets',select:'id,subject,message,category,status,staff_reply,created_at',statuses:['pending','in_progress','resolved']},
  {key:'menu',table:'fomeboa_menu_items',select:'id,venue_id,dish_name,description,price_cents,evidence_url,status,created_at',statuses:['pending','approved','rejected']},
@@ -77,7 +77,7 @@ async function save(id){
   if(d.key==='menu'){patch={status,reviewed_at:status==='pending'?null:new Date().toISOString()};q=q.update(patch).eq('id',row.id);}
   if(d.key==='reports'){patch={status,reviewed_at:status==='pending'?null:new Date().toISOString()};q=q.update(patch).eq('id',row.id);}
   if(d.key==='photos'){patch={moderation_status:status};q=q.update(patch).eq('user_id',row.user_id).eq('venue_id',row.venue_id);}
-  const result=await q.select('status');if(result.error)throw result.error;
+  const result=await q.select(d.key==='photos'?'moderation_status':'status');if(result.error)throw result.error;
   if(result.data?.length!==1)throw Error('Permission denied');
   await load();message(T('saved'));
  }catch(e){message(T('error'));btn.disabled=false;console.warn('Admin save',e?.code||'unknown');}
