@@ -68,6 +68,8 @@ qa('#cards .compact-card').forEach(card=>{
 const type=card.dataset.type;const tag=card.querySelector('.tag');
 if(type&&tag){const s=tag.textContent;const split=s.indexOf(' · ');put(tag,cats(type,true)+(split>=0?s.slice(split):''));}
 const detail=card.querySelector('.compact-details>summary');put(detail,L('details'));
+const locationNote=card.querySelector('[data-location-review]');if(locationNote){const state=locationNote.dataset.locationReview;put(locationNote,state==='conflict'?(lang==='en'?'Conflicting location: under review':lang==='pt'?'Localiza\u00e7\u00e3o inconsistente: em revis\u00e3o':'Ubicaci\u00f3n inconsistente: en revisi\u00f3n'):state==='verified'?(lang==='en'?'Linked listing; opening status unverified':lang==='pt'?'Ficha vinculada; funcionamento n\u00e3o confirmado':'Ficha enlazada; apertura sin comprobar'):(lang==='en'?'Location not yet verified':lang==='pt'?'Localiza\u00e7\u00e3o ainda n\u00e3o verificada':'Ubicaci\u00f3n pendiente de verificar'));}
+
 const fav=card.querySelector('.catalog-fav');if(fav){const label=L(fav.getAttribute('aria-pressed')==='true'?'unsave':'save');fav.title=label;fav.setAttribute('aria-label',label);}
 const maps=card.querySelector('.compact-google');if(maps){const key=maps.dataset.verified==='true'?'googleVerified':'googleRating';put(maps,L(key)+' ↗');}
 const missing=card.querySelector('.compact-no-map');if(missing)put(missing,L('locationUnknown'));

@@ -111,7 +111,7 @@
       if(!info)return false;
       try{
         if(!/^zonas\/[a-z0-9-]+\.json$/.test(info.file))return false;
-        const r=await fetch('./catalogo/'+info.file);if(!r.ok)throw Error('No disponible');const rows=await r.json();
+        const r=await fetch('./catalogo/'+info.file+'?v=locations2');if(!r.ok)throw Error('No disponible');const rows=await r.json();
         if(!Array.isArray(rows)||rows.some(v=>!v.id||!v.name||!Array.isArray(v.zones)||!v.zones.includes(name)))throw Error('Datos inv\u00e1lidos');
         poiByZone.set(name,FomeBoaCatalogQuality.filter(rows));hydrated.add(name);failedZones.delete(name);render();return true;
       }catch(_){return false}
@@ -171,6 +171,7 @@
         +FomeBoaGluten.badge(v)
         +'<p class="compact-address" title="'+esc(address)+'">'+esc(address)+'</p>'
         +'<div class="compact-actions">'+mapLink+'</div>'
+        +'<small class="location-review-note" data-location-review="'+(v.locationAudit?.issues?.includes('same_identity_address_conflicting_coordinates')?'conflict':maps.kind==='verified'?'verified':'unverified')+'">'+(maps.kind==='verified'?'Ficha enlazada; apertura sin comprobar':v.locationAudit?.issues?.includes('same_identity_address_conflicting_coordinates')?'Ubicaci\u00f3n inconsistente: en revisi\u00f3n':'Ubicaci\u00f3n pendiente de verificar')+'</small>'
         +'<details class="compact-details"><summary>Más información</summary><div class="compact-extra">'
         +(v.cuisine?'<p>'+esc(v.cuisine)+'</p>':'')
         +'<p>Fuente: '+esc(v.source||'OpenStreetMap')+'. Estado de apertura no verificado.</p>'
@@ -199,7 +200,7 @@
   $('catalogAll').onclick=async()=>{
     busyAll=true;message='Abriendo el cat\u00e1logo guardado...';render();
     try{
-      if(!allRows){const r=await fetch('./catalogo/todos.json');if(!r.ok)throw Error('No disponible');allRows=await r.json();if(!Array.isArray(allRows))throw Error('Datos inv\u00e1lidos')}
+      if(!allRows){const r=await fetch('./catalogo/todos.json?v=locations2');if(!r.ok)throw Error('No disponible');allRows=await r.json();if(!Array.isArray(allRows))throw Error('Datos inv\u00e1lidos')}
       chosen.clear();showAll=true;visibleLimit=60;syncZoneLabels();message='Cat\u00e1logo completo de los datos cargados. Pod\u00e9s filtrar por tipo o nombre; no es un censo completo de la ciudad.';
       el('restaurantes').scrollIntoView({behavior:'smooth'});
     }catch(_){message='No se pudo abrir el cat\u00e1logo guardado. Prob\u00e1 la consulta por zona.'}
