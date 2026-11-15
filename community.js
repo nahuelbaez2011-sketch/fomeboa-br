@@ -202,7 +202,21 @@ profileRoot.addEventListener('click',async e=>{
  if(b.dataset.fbTab)return chooseTab(b.dataset.fbTab);
  if(b.hasAttribute('data-fb-retry'))return refreshProfile();
  if(b.dataset.fbMore){b.disabled=true;try{if(b.dataset.fbMore==='reviews')await loadHistory(false);else await loadReports(false);drawProfile();}catch(error){notify(errorText(error));b.disabled=false;}return;}
- if(b.dataset.fbDelete){if(!root.confirm(T('confirmDelete')))return;b.disabled=true;const id=b.dataset.fbDelete,ticket=epoch;try{must(await db().from('fomeboa_reviews').delete().eq('user_id',identity().id).eq('venue_id',id));if(ticket!==epoch)return;totals.delete(id);await refreshProfile();await refreshRatings([id]);}catch(error){notify(errorText(error));b.disabled=false;}}
+ if(b.dataset.fbDelete){
+ if(!root.confirm(T('confirmDelete')))return;
+ b.disabled=true;const id=b.dataset.fbDelete,ticket=epoch;
+ try{
+  const me=identity();if(!me)throw Error('AUTH_REQUIRED');
+  const photo=must(await db().from('fomeboa_review_photos').select('object_path').eq('user_id',me.id).eq('venue_id',id).maybeSingle());
+  must(await db().from('fomeboa_reviews').delete().eq('user_id',me.id).eq('venue_id',id));
+  if(photo?.object_path){
+   const removed=await db().storage.from('fomeboa-review-photos').remove([photo.object_path]);
+   if(removed.error)console.warn('Photo cleanup requires retry',removed.error.code||'storage');
+  }
+  if(ticket!==epoch)return;
+  historyPhotos.delete(id);totals.delete(id);await loadHistory();await refreshProfile();await refreshRatings([id]);
+ }catch(error){notify(errorText(error));b.disabled=false;}
+}
 });
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-fb-rate],[data-fb-edit],[data-fb-report],[data-fb-unsave]');if(!b)return;
