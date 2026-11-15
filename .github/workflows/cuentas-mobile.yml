@@ -6,6 +6,7 @@ on:
       - '.github/workflows/cuentas-mobile.yml'
       - 'auth.js'
       - 'extras.js'
+      - 'support.js'
       - 'community.js'
       - 'community-locale.js'
       - 'community.css'
@@ -35,6 +36,7 @@ jobs:
         run: |
           node --check auth.js
           node --check extras.js
+          node --check support.js
           node --check community.js
           node --check community-locale.js
           node --check i18n.js
@@ -55,6 +57,8 @@ jobs:
           const schema=fs.readFileSync('supabase/schema.sql','utf8');
           assert(h.includes('<head>')&&h.includes('</head>')&&/auth\.js\?v=(google-first1|community1)/.test(h));
           assert(h.includes('auth-config.js?v=google-first1'));
+          assert(h.includes('support.js?v=help1'));
+          assert(fs.readFileSync('support.js','utf8').includes('fomeboa_support_tickets'));
           assert(h.includes('extras.js?v=features2')&&h.includes('community.js?v=features2'));
           assert(fs.readFileSync('extras.js','utf8').includes('navigator.geolocation.getCurrentPosition'));
           assert(fs.readFileSync('community.js','utf8').includes('fomeboa-review-photos'));
