@@ -11,7 +11,7 @@
   const byId=id=>document.getElementById(id);
   const nav=document.querySelector('header .nav');
   if(!nav)return;
-  let user=null,mode='signup',busy=false,validationToken=0,googleReady=null;
+  let user=null,mode='signup',busy=false,validationToken=0,googleReady=null,googleChecked=false;
   const redirectUrl=String(config.webRedirectUrl||'https://nahuelbaez2011-sketch.github.io/fomeboa-br/');
   const trigger=document.createElement('button');
   trigger.type='button';trigger.id='fomeboaAccountButton';trigger.textContent='Crear cuenta';
@@ -37,7 +37,7 @@
       '<button type="button" data-auth-mode="reset">Olvidé mi contraseña</button>',
     '</div>',
     '<form id="fomeboaNewPasswordForm" hidden><label>Nueva contraseña<input id="fomeboaNewPassword" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit">Cambiar contraseña</button></form>',
-    '<section id="fomeboaSignedIn" hidden><p id="fomeboaWelcome"></p><p id="fomeboaLevel"></p><p class="fomeboa-auth-small">Tu perfil será el mismo en web, Android e iPhone.</p><button id="fomeboaLogout" type="button">Cerrar sesión</button></section>'
+    '<section id="fomeboaSignedIn" hidden><p id="fomeboaWelcome"></p><p id="fomeboaLevel"></p><p class="fomeboa-auth-small">Tu perfil funcionará en la web y, más adelante, Android.</p><button id="fomeboaLogout" type="button">Cerrar sesión</button></section>'
   ].join('');
   document.body.appendChild(dlg);
   // When a real Supabase project is configured, all app UI requires an authenticated session.
@@ -113,6 +113,8 @@
     if(/Invalid login credentials/i.test(s))return window.FomeBoaI18n?.t?.('authErrorInvalid')||'Correo o contraseña incorrectos.';
     if(/Email not confirmed/i.test(s))return window.FomeBoaI18n?.t?.('authErrorEmail')||'Confirmá tu correo antes de ingresar.';
     if(/rate limit/i.test(s))return window.FomeBoaI18n?.t?.('authErrorRate')||'Demasiados intentos. Intentá más adelante.';
+    if(/provider is not enabled|unsupported provider/i.test(s))return window.FomeBoaI18n?.t?.('googleDisabled')||'Google todavía no está habilitado.';
+    if(/redirect.*not allowed|invalid redirect/i.test(s))return 'Falta autorizar el regreso a FomeBoa en Supabase.';
     return s.slice(0,200);
   }
   byId('fomeboaAuthForm').onsubmit=async event=>{
@@ -138,7 +140,9 @@
   };
   function googleStatusText(){
     if(googleReady===false)return window.FomeBoaI18n?.t?.('googleDisabled')||'Google todavía no está habilitado.';
-    if(googleReady===null)return window.FomeBoaI18n?.t?.('googleChecking')||'Comprobando el inicio de sesión con Google...';
+    if(googleReady===null)return googleChecked
+      ?(window.FomeBoaI18n?.t?.('googleUnknown')||'No pudimos comprobar Google. Probá de nuevo o usá el correo.')
+      :(window.FomeBoaI18n?.t?.('googleChecking')||'Comprobando el inicio de sesión con Google...');
     return '';
   }
   function showGoogleStatus(){
@@ -155,6 +159,7 @@
       const settings=await response.json();
       googleReady=settings.external?.google===true;
     }catch(_){googleReady=null;}
+    googleChecked=true;
     showGoogleStatus();
   }
   async function signInWithGoogle(){
