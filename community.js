@@ -10,7 +10,7 @@ const venueType=v=>root.FomeBoaI18n?.category?.(v.category||v.type,true)||v.cate
 const thresholds=[0,50,150,400,800,1500];
 let owner=null,epoch=0,tab='reviews',profile=null,progress=null,earned=[],history=[],historyMore=false,historyOffset=0,saved=[],reports=[],reportsMore=false,reportsOffset=0;
 let profileLoading=false,profileError=false,tabLoading=false,requestId=0,profilePromise=null;
-const venues=new Map(), totals=new Map(), inFlightFavorites=new Set();
+const venues=new Map(), totals=new Map(), inFlightFavorites=new Set(), historyPhotos=new Map();
 const profileRoot=document.createElement('div');profileRoot.id='fomeboaProfileContent';
 const signed=$('fomeboaSignedIn');if(!signed)return;
 signed.insertBefore(profileRoot,$('fomeboaLogout'));
@@ -42,6 +42,15 @@ async function loadHistory(reset=true){
  const rows=must(await c.from('fomeboa_reviews').select('venue_id,rating,body,status,created_at,updated_at,fomeboa_venues(id,name,category,zone,address)').eq('user_id',me.id).order('updated_at',{ascending:false}).range(offset,offset+29))||[];
  if(ticket!==epoch)return;
  history=reset?rows.map(normalizeJoined):history.concat(rows.map(normalizeJoined));historyOffset=offset+rows.length;historyMore=rows.length===30;
+ if(reset)historyPhotos.clear();
+ if(rows.length){
+  const photoResult=await c.from('fomeboa_review_photos').select('venue_id,object_path,moderation_status').eq('user_id',me.id).in('venue_id',rows.map(r=>r.venue_id));
+  if(photoResult.error)throw photoResult.error;
+  await Promise.all((photoResult.data||[]).map(async p=>{
+   const result=await c.storage.from('fomeboa-review-photos').createSignedUrl(p.object_path,600);
+   if(!result.error&&ticket===epoch)historyPhotos.set(p.venue_id,{url:result.data.signedUrl,status:p.moderation_status});
+  }));
+ }
 }
 async function loadReports(reset=true){
  const c=db(),me=identity(),ticket=epoch;if(!c||!me)return;
@@ -67,13 +76,13 @@ async function refreshProfile(){
   finally{if(ticket===epoch){profileLoading=false;profilePromise=null;drawProfile();}}
  })();return profilePromise;
 }
-function metric(code){if(code==='member')return 1;if(code==='reviews'||code==='zones')return Number(progress?.[code]||0);return Number(progress?.categories?.[code]||0);}
+function metric(code){if(code==='member')return 1;if(['reviews','zones','photos','menus','location_fixes'].includes(code))return Number(progress?.[code]||0);return Number(progress?.categories?.[code]||0);}
 function badgeMarkup(){return '<div class="fb-badges">'+root.FomeBoaCommunityText.badges().map(b=>{
  const receipt=earned.find(e=>e.code===b.code),n=Math.min(metric(b.metric),b.target);
  return '<article class="fb-badge '+(receipt?'earned':'')+'"><span class="fb-badge-icon" aria-hidden="true">'+esc(b.icon)+'</span><h4>'+esc(b.name)+'</h4><p>'+esc(b.description)+'</p><span class="fb-badge-state">'+(receipt?esc(T('earned'))+' \u00b7 '+esc(date(receipt.earned_at)):n+' / '+b.target+' \u00b7 '+esc(T('locked')))+'</span><progress class="fb-progress" value="'+n+'" max="'+b.target+'" aria-label="'+esc(b.name)+'"></progress></article>';
  }).join('')+'</div><p class="fb-subtle">'+esc(T('badgeNote'))+'</p>';}
 function historyMarkup(){if(!history.length)return '<p class="fb-empty">'+esc(T('emptyReviews'))+'</p>';
- return '<ul class="fb-history">'+history.map(r=>'<li><h4>'+esc(r.venue.name)+'</h4><div class="fb-meta">'+esc(venueType(r.venue))+' \u00b7 '+esc(r.venue.zone)+' \u00b7 '+esc(date(r.updated_at))+'</div><p class="fb-stars" aria-label="'+r.rating+' / 5">'+'\u2605'.repeat(r.rating)+'\u2606'.repeat(5-r.rating)+'</p>'+(r.status==='hidden'?'<p class="fb-subtle">'+esc(T('hidden'))+'</p>':'')+(r.body?'<p>'+esc(r.body)+'</p>':'')+'<div class="fb-history-actions"><button type="button" data-fb-edit="'+esc(r.venue_id)+'">'+esc(T('edit'))+'</button><button type="button" data-fb-delete="'+esc(r.venue_id)+'">'+esc(T('remove'))+'</button></div></li>').join('')+'</ul>'+(historyMore?'<button class="fb-load-more" data-fb-more="reviews">'+esc(T('more'))+'</button>':'');}
+ return '<ul class="fb-history">'+history.map(r=>'<li><h4>'+esc(r.venue.name)+'</h4><div class="fb-meta">'+esc(venueType(r.venue))+' \u00b7 '+esc(r.venue.zone)+' \u00b7 '+esc(date(r.updated_at))+'</div><p class="fb-stars" aria-label="'+r.rating+' / 5">'+'\u2605'.repeat(r.rating)+'\u2606'.repeat(5-r.rating)+'</p>'+(r.status==='hidden'?'<p class="fb-subtle">'+esc(T('hidden'))+'</p>':'')+(r.body?'<p>'+esc(r.body)+'</p>':'')+(historyPhotos.get(r.venue_id)?'<figure class="fb-review-photo"><img loading="lazy" alt="'+esc(T('photoAlt'))+'" src="'+esc(historyPhotos.get(r.venue_id).url)+'"><figcaption>'+esc(T('privatePhoto'))+'</figcaption></figure>':'')+'<div class="fb-history-actions"><button type="button" data-fb-edit="'+esc(r.venue_id)+'">'+esc(T('edit'))+'</button><button type="button" data-fb-delete="'+esc(r.venue_id)+'">'+esc(T('remove'))+'</button></div></li>').join('')+'</ul>'+(historyMore?'<button class="fb-load-more" data-fb-more="reviews">'+esc(T('more'))+'</button>':'');}
 function savedMarkup(){if(!saved.length)return '<p class="fb-empty">'+esc(T('emptySaved'))+'</p>';return '<ul class="fb-history">'+saved.map(r=>'<li><h4>'+esc(r.venue.name)+'</h4><p class="fb-meta">'+esc(venueType(r.venue))+' \u00b7 '+esc(r.venue.zone)+'</p><div class="fb-history-actions"><button data-fb-rate="'+esc(r.venue_id)+'" type="button">'+esc(T('rate'))+'</button><button data-fb-unsave="'+esc(r.venue_id)+'" type="button">'+esc(T('remove'))+'</button></div></li>').join('')+'</ul>';}
 function reportsMarkup(){if(!reports.length)return '<p class="fb-empty">'+esc(T('emptyReports'))+'</p>';return '<ul class="fb-history">'+reports.map(r=>'<li><h4>'+esc(r.venue.name)+'</h4><div class="fb-meta">'+esc(date(r.created_at))+' \u00b7 '+esc(T(r.kind))+'</div><p>'+esc(r.detail)+'</p><p class="fb-badge-state">'+esc(T(r.status))+'</p></li>').join('')+'</ul>'+(reportsMore?'<button class="fb-load-more" data-fb-more="reports">'+esc(T('more'))+'</button>':'');}
 function drawProfile(){
@@ -139,11 +148,12 @@ function decorate(rows){
  const id=card.dataset.venueId;if(!card.querySelector('.fb-rating-row')){const row=document.createElement('div');row.className='fb-rating-row';row.innerHTML='<span class="fb-rating-summary" data-fb-summary="'+esc(id)+'">'+ratingText(id)+'</span><button class="fb-rate" type="button" data-fb-rate="'+esc(id)+'">'+esc(T('rate'))+'</button>';card.querySelector('.compact-actions')?.before(row);}
  const oldReport=card.querySelector('.catalog-report');if(oldReport){const button=document.createElement('button');button.type='button';button.className='fb-report-btn';button.dataset.fbReport=id;button.textContent=T('report');oldReport.replaceWith(button);}
  });
+ root.FomeBoaExtras?.decorate?.(rows);
  clearTimeout(ratingTimer);ratingTimer=setTimeout(()=>refreshRatings(cards.map(c=>c.dataset.venueId)),150);
 }
 async function authChanged(){
  const me=identity();if(owner===(me?.id||null))return;
- owner=me?.id||null;epoch++;profilePromise=null;profile=null;progress=null;earned=[];history=[];saved=[];reports=[];totals.clear();profileError=false;profileLoading=false;
+ owner=me?.id||null;epoch++;profilePromise=null;profile=null;progress=null;earned=[];history=[];saved=[];reports=[];totals.clear();historyPhotos.clear();profileError=false;profileLoading=false;
  if(reviewDialog.open)reviewDialog.close();if(reportDialog.open)reportDialog.close();toast.hidden=true;
  updateLocalFavorites();drawProfile();
  if(me){try{await loadFavorites();await refreshProfile();}catch(e){notify(errorText(e));}}
@@ -163,7 +173,7 @@ document.addEventListener('click',e=>{
 root.addEventListener('fomeboa:auth',authChanged);
 root.addEventListener('fomeboa:profile-open',()=>refreshProfile());
 root.addEventListener('fomeboa:language',()=>{drawProfile();paintRatings();document.querySelectorAll('.fb-rate').forEach(b=>b.textContent=T('rate'));document.querySelectorAll('.fb-report-btn').forEach(b=>b.textContent=T('report'));});
-root.FomeBoaCommunity=Object.freeze({decorate,toggleFavorite,refreshProfile,openReview,openReport});
+root.FomeBoaCommunity=Object.freeze({decorate,toggleFavorite,refreshProfile,openReview,openReport,ensureVenue});
 authChanged();
 if(typeof visibleVenues==='function')decorate(visibleVenues().slice(0,typeof visibleLimit!=='undefined'?visibleLimit:60));
 })(window);
