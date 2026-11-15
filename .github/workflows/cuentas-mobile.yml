@@ -39,12 +39,15 @@ jobs:
           const a=fs.readFileSync('auth.js','utf8');
           const config=fs.readFileSync('auth-config.js','utf8');
           const schema=fs.readFileSync('supabase/schema.sql','utf8');
-          assert(h.includes('<head>')&&h.includes('</head>')&&h.includes('auth.js?v=2'));
+          assert(h.includes('<head>')&&h.includes('</head>')&&h.includes('auth.js?v=google-first1'));
           assert(h.includes('auth-config.js?v=1'));
           assert(a.includes('supabase.createClient')&&a.includes('auth.signUp')&&a.includes('auth.signInWithPassword'));
           assert(a.includes('auth.resetPasswordForEmail')&&a.includes('auth.signOut'));
           assert(a.includes('Cuenta · próximamente'));
-          assert(/url:\s*""/.test(config)&&/publishableKey:\s*""/.test(config));
+          assert(/url:\s*"https:\/\/[^\"]+\.supabase\.co"/.test(config));
+          assert(/publishableKey:\s*"sb_publishable_/.test(config));
+          assert(config.includes('webRedirectUrl'));
+          assert(!/sb_secret_/.test(config.replace(/\/\*[\s\S]*?\*\//g,'')));
           assert(!/sb_secret_|service_role\s*:/.test(config.replace(/\/\*[\s\S]*?\*\//g,'')));
           assert(schema.includes('enable row level security'));
           assert(schema.includes('grant update (display_name)'));
