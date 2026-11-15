@@ -96,21 +96,60 @@ function drawProfile(){
  profileRoot.innerHTML=head+tabs+'<section class="fb-profile-panel" aria-live="polite">'+body+'</section>'+(tab==='badges'?'<details><summary class="fb-subtle">XP</summary><p class="fb-subtle">'+esc(T('reward'))+'</p></details>':'');
 }
 async function chooseTab(next){tab=next;const ticket=epoch;tabLoading=true;drawProfile();try{if(tab==='reviews')await loadHistory();else if(tab==='favorites')await loadFavorites();else if(tab==='reports')await loadReports();}catch(e){notify(errorText(e));}finally{if(ticket===epoch){tabLoading=false;drawProfile();}}}
+async function prepareReviewPhoto(file){
+ if(!/^image\/(jpeg|png|webp)$/.test(file.type)||file.size>8*1024*1024)throw Error('INVALID_IMAGE');
+ const url=URL.createObjectURL(file),img=new Image();
+ try{
+  img.src=url;
+  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});
+  const scale=Math.min(1,1024/Math.max(img.naturalWidth,img.naturalHeight));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+  canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+  const context=canvas.getContext('2d');if(!context)throw Error('INVALID_IMAGE');
+  context.drawImage(img,0,0,canvas.width,canvas.height);
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.72));
+  if(!blob||blob.size>950000)throw Error('IMAGE_TOO_LARGE');
+  // Drawing to a canvas drops GPS and camera EXIF metadata from the uploaded file.
+  return blob;
+ }finally{URL.revokeObjectURL(url);}
+}
 const reviewDialog=document.createElement('dialog');reviewDialog.className='fb-dialog';reviewDialog.id='fomeboaReviewDialog';reviewDialog.setAttribute('aria-labelledby','fbReviewTitle');document.body.appendChild(reviewDialog);
 const reportDialog=document.createElement('dialog');reportDialog.className='fb-dialog';reportDialog.id='fomeboaReportDialog';reportDialog.setAttribute('aria-labelledby','fbReportTitle');document.body.appendChild(reportDialog);
 async function openReview(v){
  if(!identity()){root.FomeBoaAuth.open();return;}
  if(!v)return;const ticket=epoch;reviewDialog.innerHTML='<p class="fb-empty">'+esc(T('loading'))+'</p>';if(!reviewDialog.open)reviewDialog.showModal();
  try{
- const row=must(await db().from('fomeboa_reviews').select('rating,body,status').eq('user_id',identity().id).eq('venue_id',v.id).maybeSingle());
+ const [reviewQuery,photoQuery]=await Promise.all([
+  db().from('fomeboa_reviews').select('rating,body,status').eq('user_id',identity().id).eq('venue_id',v.id).maybeSingle(),
+  db().from('fomeboa_review_photos').select('object_path,moderation_status').eq('user_id',identity().id).eq('venue_id',v.id).maybeSingle()
+ ]);
+ const row=must(reviewQuery),existingPhoto=must(photoQuery);
  if(ticket!==epoch)return;
- reviewDialog.innerHTML='<h2 id="fbReviewTitle">'+esc(T('writeReview'))+'</h2><h3>'+esc(v.name)+'</h3><form id="fbReviewForm"><fieldset class="fb-rating-input"><legend>'+esc(T('stars'))+'</legend><div class="fb-star-options">'+[1,2,3,4,5].map(n=>'<label><input name="rating" type="radio" value="'+n+'" required '+(row?.rating===n?'checked':'')+'><span aria-label="'+n+' / 5">'+n+'\u2605</span></label>').join('')+'</div></fieldset><label>'+esc(T('comment'))+'<textarea name="body" maxlength="2000" placeholder="'+esc(T('commentHint'))+'">'+esc(row?.body||'')+'</textarea></label><label class="fb-visited"><input name="visited" type="checkbox" required><span>'+esc(T('visited'))+'</span></label><p class="fb-subtle">'+esc(T('privacy'))+'</p><details><summary class="fb-subtle">XP</summary><p class="fb-subtle">'+esc(T('reward'))+'</p></details><p id="fbReviewFeedback" class="fb-feedback" role="status"></p><div class="fb-dialog-actions"><button type="button" data-fb-cancel>'+esc(T('cancel'))+'</button><button type="submit">'+esc(T('saveReview'))+'</button></div></form>';
+ reviewDialog.innerHTML='<h2 id="fbReviewTitle">'+esc(T('writeReview'))+'</h2><h3>'+esc(v.name)+'</h3><form id="fbReviewForm"><fieldset class="fb-rating-input"><legend>'+esc(T('stars'))+'</legend><div class="fb-star-options">'+[1,2,3,4,5].map(n=>'<label><input name="rating" type="radio" value="'+n+'" required '+(row?.rating===n?'checked':'')+'><span aria-label="'+n+' / 5">'+n+'\u2605</span></label>').join('')+'</div></fieldset><label>'+esc(T('comment'))+'<textarea name="body" maxlength="2000" placeholder="'+esc(T('commentHint'))+'">'+esc(row?.body||'')+'</textarea></label><label class="fb-photo-label">'+esc(T('addPhoto'))+(existingPhoto?'<small>'+esc(T('photoAlready'))+'</small>':'<input name="photo" type="file" accept="image/jpeg,image/png,image/webp"><small>'+esc(T('photoHint'))+'</small>')+'</label><label class="fb-visited"><input name="visited" type="checkbox" required><span>'+esc(T('visited'))+'</span></label><p class="fb-subtle">'+esc(T('privacy'))+'</p><details><summary class="fb-subtle">XP</summary><p class="fb-subtle">'+esc(T('reward'))+'</p></details><p id="fbReviewFeedback" class="fb-feedback" role="status"></p><div class="fb-dialog-actions"><button type="button" data-fb-cancel>'+esc(T('cancel'))+'</button><button type="submit">'+esc(T('saveReview'))+'</button></div></form>';
  reviewDialog.querySelector('[data-fb-cancel]').onclick=()=>reviewDialog.close();
  $('fbReviewForm').onsubmit=async e=>{
  e.preventDefault();const form=e.currentTarget,button=form.querySelector('[type=submit]');if(button.disabled)return;button.disabled=true;const fd=new FormData(form);$('fbReviewFeedback').textContent=T('saving');
- try{const record=await ensureVenue(v);if(ticket!==epoch)throw Error('AUTH_REQUIRED');must(await db().rpc('fomeboa_save_review',{p_venue_id:record.id,p_rating:Number(fd.get('rating')),p_body:String(fd.get('body')||''),p_visited:fd.get('visited')==='on'}));
- if(ticket!==epoch)return;reviewDialog.close();totals.delete(record.id);notify(T('saved'));await refreshProfile();await refreshRatings([record.id]);}
- catch(error){if(ticket===epoch)$('fbReviewFeedback').textContent=errorText(error);}finally{button.disabled=false;}
+ let reviewSaved=false;
+ try{
+  const record=await ensureVenue(v);
+  if(ticket!==epoch)throw Error('AUTH_REQUIRED');
+  must(await db().rpc('fomeboa_save_review',{p_venue_id:record.id,p_rating:Number(fd.get('rating')),p_body:String(fd.get('body')||''),p_visited:fd.get('visited')==='on'}));
+  reviewSaved=true;
+  const file=fd.get('photo');
+  if(file instanceof File&&file.size){
+   const jpg=await prepareReviewPhoto(file);
+   const me=identity();if(!me||ticket!==epoch)throw Error('AUTH_REQUIRED');
+   const path=me.id+'/'+crypto.randomUUID()+'.jpg';
+   must(await db().storage.from('fomeboa-review-photos').upload(path,jpg,{contentType:'image/jpeg',upsert:false,cacheControl:'3600'}));
+   try{must(await db().from('fomeboa_review_photos').insert({user_id:me.id,venue_id:record.id,object_path:path}));}
+   catch(e){await db().storage.from('fomeboa-review-photos').remove([path]);throw e;}
+  }
+  if(ticket!==epoch)return;
+  reviewDialog.close();totals.delete(record.id);notify(T('saved'));historyPhotos.delete(record.id);
+  await refreshProfile();await refreshRatings([record.id]);
+ }catch(error){if(ticket===epoch)$('fbReviewFeedback').textContent=reviewSaved?T('photoFailedSaved'):errorText(error);}
+ finally{button.disabled=false;}
  };
  }catch(e){reviewDialog.innerHTML='<p class="fb-empty">'+esc(errorText(e))+'</p><button type="button" data-fb-cancel>'+esc(T('close'))+'</button>';reviewDialog.querySelector('button').onclick=()=>reviewDialog.close();}
 }
