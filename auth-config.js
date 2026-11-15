@@ -1,6 +1,6 @@
-/* Public client configuration. Connect the Supabase project before enabling registration.
-   Only a publishable/anon key belongs here. NEVER put service_role, sb_secret, or DB passwords in this public repository. */
+/* Public Supabase project configuration. Publishable key only, with RLS protecting profiles. */
 window.FOMEBOA_AUTH_CONFIG = Object.freeze({
-  url: "",
-  publishableKey: ""
+  url: "https://lecbsawivmlkofrtpwde.supabase.co",
+  publishableKey: "sb_publishable_YQ-s-_0_d5YX_ORqVzeTKA_sLZfAUet",
+  webRedirectUrl: "https://nahuelbaez2011-sketch.github.io/fomeboa-br/"
 });
